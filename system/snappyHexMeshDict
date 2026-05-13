@@ -1,0 +1,136 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../initialConditions";
+
+castellatedMesh true;
+snap            true;
+addLayers       true;
+
+geometry
+{
+    FW.obj
+    {
+        type triSurfaceMesh;
+        name DP_FW;
+    }
+    refinementBox
+    {
+        type searchableBox;
+        min $min1;
+        max $max1;
+    }
+}
+
+castellatedMeshControls
+{
+    maxLocalCells 250000000;
+    maxGlobalCells 250000000;
+    minRefinementCells 0;
+    maxLoadUnbalance 0.05;
+    nCellsBetweenLevels 4;
+
+    features
+    (
+        {
+            file "FW.eMesh";
+            level $FW_feature;
+        }
+    );
+
+    refinementSurfaces
+    {
+        DP_FW{
+            level $FW_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+    }
+    resolveFeatureAngle 20;
+
+    refinementRegions
+    {
+        DP_FW
+        {
+            mode distance;
+            levels (($dist1 $ref1) ($dist2 $ref2) ($dist3 $ref3));
+        }
+        refinementBox
+        {
+            mode inside;
+            levels (($lvl1 $lvl1));
+        }
+    };
+    locationInMesh (1.5 1.5 1.5); // Spostato al sicuro nel nuovo tunnel
+    allowFreeStandingZoneFaces false;
+}
+
+snapControls
+{
+    nSmoothPatch 5;
+    tolerance 2.0;
+    nSolveIter 50;
+    nRelaxIter 10;
+    nFeatureSnapIter 30;
+    implicitFeatureSnap false;
+    explicitFeatureSnap true;
+    multiRegionFeatureSnap false;
+}
+
+addLayersControls
+{
+    relativeSizes false;
+    layers
+    {
+        DP_FW {   
+            nSurfaceLayers $FW_nLayers;
+            firstLayerThickness $firstLayerThickness_FW;
+            expansionRatio $expansionRatio_FW;    
+        }
+        ground {   	
+            nSurfaceLayers $ground_nLayers;
+            relativeSizes true;
+            firstLayerThickness $firstLayerThickness_ground;
+            expansionRatio $expansionRatio_ground;        				  
+        }
+    }
+    expansionRatio $expansionRatio;
+    firstLayerThickness $firstLayerThickness;
+    minThickness 0.1e-6;
+    nGrow 0;
+    featureAngle $featureAngle;
+    layerTerminationAngle -180;
+    slipFeatureAngle $slipFeatureAngle;
+    additionalReporting true;
+    nSmoothSurfaceNormals $nSmoothSurfaceNormals;
+    nSmoothNormals $nSmoothNormals;
+    nSmoothThickness $nSmoothThickness;
+    maxFaceThicknessRatio $maxFaceThicknessRatio;
+    maxThicknessToMedialRatio $maxThicknessToMedialRatio;
+    minMedialAxisAngle $minMedialAxisAngle;
+    nBufferCellsNoExtrude 0;
+    nLayerIter 50;
+    nRelaxedIter 35;
+}
+
+meshQualityControls{
+    #include "meshQualityDict";
+}
+
+writeFlags ( layerSets layerFields );
+mergeTolerance 1e-6;
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

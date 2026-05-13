@@ -1,0 +1,46 @@
+# ==========================================
+# 1. OPENFOAM - TIME-STEPS E DATI DI CALCOLO
+# ==========================================
+# Così ignori correttamente tutti i time-step (10, 50, 100, ecc.)
+[1-9]*
+0.*
+-*[0-9]*
+
+# ==========================================
+# 2. CALCOLO PARALLELO E LOG
+# ==========================================
+# Ignora le cartelle dei core paralleli
+processor*
+
+# LASCIA VISIBILI i log (ottimo per farli analizzare all'AI)
+#*.log
+#log_mesh/
+#log_solve/
+#ended.txt
+
+# ==========================================
+# 3. MESH GENERATA E POST-PROCESSING
+# ==========================================
+# Ignora la mesh tridimensionale calcolata
+constant/polyMesh/
+
+# Ignora i file di appoggio per caricare i risultati (.foam)
+*.foam
+
+# Ignora tutte le estrazioni geometriche pesanti
+*.obj
+
+# IGNORA i file 3D enormi
+VTK/
+
+# LASCIA VISIBILI i file di testo di post-processing (es. file delle forze)
+#postProcessing/
+
+# ==========================================
+# 4. FILE TEMPORANEI E CACHE
+# ==========================================
+*~
+*.swp
+core
+__pycache__/
+*.pyc

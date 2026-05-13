@@ -1,0 +1,330 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2106                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      createBafflesDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+internalFacesOnly true;
+// Baffles to create.
+baffles
+{
+    Battery_Fan_lower // =====================================================================================
+    {
+        //- Select faces and orientation through a searchableSurface
+        type		searchableSurface;
+        surface	triSurfaceMesh;	
+        name		FanDiskBatterySurface2_lower.obj;
+
+        patches
+        {	   
+            master
+            {
+                //- Master side patch
+
+                name            FanDiskBattery_lower_half0;
+                type            cyclic;
+                neighbourPatch  FanDiskBattery_lower_half1;
+
+                patchFields
+                {
+                    	p
+		        {
+		            type            fan;
+		            patchType       cyclic;
+		            value           uniform 0;
+		            jumpTable       csvFile;
+		            jumpTableCoeffs
+		            {
+		                nHeaderLine     1;
+		                refColumn       0;
+		                componentColumns 1(1);
+		                separator       ",";
+		                mergeSeparators no;
+		                file            "$FOAM_CASE/constant/fanCurve_battery.csv";
+		            }
+		        }
+                }
+            }
+            slave
+            {
+                //- Slave side patch
+
+                name            FanDiskBattery_lower_half1;
+                type            cyclic;
+                neighbourPatch  FanDiskBattery_lower_half0;
+
+                patchFields
+                {
+                    	p
+		        {
+		            type            fan;
+		            patchType       cyclic;
+		            value           uniform 0;
+		            jumpTable       csvFile;
+		            jumpTableCoeffs
+		            {
+		                nHeaderLine     1;
+		                refColumn       0;
+		                componentColumns 1(1);
+		                separator       ",";
+		                mergeSeparators no;
+		                file            "$FOAM_CASE/constant/fanCurve_battery.csv";
+		            }
+		        }
+                }
+            }
+        }
+    }
+    
+    Battery_Fan_upper // =====================================================================================
+    {
+        //- Select faces and orientation through a searchableSurface
+        type		searchableSurface;
+        surface	triSurfaceMesh;	
+        name		FanDiskBatterySurface2_upper.obj;
+
+        patches
+        {	   
+            master
+            {
+                //- Master side patch
+
+                name            FanDiskBattery_upper_half0;
+                type            cyclic;
+                neighbourPatch  FanDiskBattery_upper_half1;
+
+                patchFields
+                {
+                    	p
+		        {
+		            type            fan;
+		            patchType       cyclic;
+		            value           uniform 0;
+		            jumpTable       csvFile;
+		            jumpTableCoeffs
+		            {
+		                nHeaderLine     1;
+		                refColumn       0;
+		                componentColumns 1(1);
+		                separator       ",";
+		                mergeSeparators no;
+		                file            "$FOAM_CASE/constant/fanCurve_battery.csv";
+		            }
+		        }
+                }
+            }
+            slave
+            {
+                //- Slave side patch
+
+                name            FanDiskBattery_upper_half1;
+                type            cyclic;
+                neighbourPatch  FanDiskBattery_upper_half0;
+
+                patchFields
+                {
+                    	p
+		        {
+		            type            fan;
+		            patchType       cyclic;
+		            value           uniform 0;
+		            jumpTable       csvFile;
+		            jumpTableCoeffs
+		            {
+		                nHeaderLine     1;
+		                refColumn       0;
+		                componentColumns 1(1);
+		                separator       ",";
+		                mergeSeparators no;
+		                file            "$FOAM_CASE/constant/fanCurve_battery.csv";
+		            }
+		        }
+                }
+            }
+        }
+    }
+    
+    Radiator_Fan // =====================================================================================
+    {
+        //- Select faces and orientation through a searchableSurface
+        type		searchableSurface;
+        surface	triSurfaceMesh;	
+        name		FanDiskSurface2_Radiator.obj;
+
+        patches
+        {	   
+            master
+            {
+                //- Master side patch
+
+                name            FanDisk_Radiator_half0;
+                type            cyclic;
+                neighbourPatch  FanDisk_Radiator_half1;
+
+                patchFields
+                {
+                    	p
+		        {
+		            type            fan;
+		            patchType       cyclic;
+		            value           uniform 0;
+		            jumpTable       csvFile;
+		            jumpTableCoeffs
+		            {
+		                nHeaderLine     1;
+		                refColumn       0;
+		                componentColumns 1(1);
+		                separator       ",";
+		                mergeSeparators no;
+		                file            "$FOAM_CASE/constant/fanCurve_radiator.csv";
+		            }
+		        }
+                }
+            }
+            slave
+            {
+                //- Slave side patch
+
+                name            FanDisk_Radiator_half1;
+                type            cyclic;
+                neighbourPatch  FanDisk_Radiator_half0;
+
+                patchFields
+                {
+                    	p
+		        {
+		            type            fan;
+		            patchType       cyclic;
+		            value           uniform 0;
+		            jumpTable       csvFile;
+		            jumpTableCoeffs
+		            {
+		                nHeaderLine     1;
+		                refColumn       0;
+		                componentColumns 1(1);
+		                separator       ",";
+		                mergeSeparators no;
+		                file            "$FOAM_CASE/constant/fanCurve_radiator.csv";
+		            }
+		        }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+/*
+internalFacesOnly true;
+// Baffles to create.
+baffles
+{
+    baffleFaces // =====================================================================================
+    {
+        //- Select faces and orientation through a searchableSurface
+        type        faceZone;
+        zoneName    FanDiskBattery2_lower_faceZone;
+        flip false;
+
+        patches
+        {
+            master
+            {
+            	name		FanDiskBattery2_lower;
+            	type            fan;
+		patchType       cyclic;
+		neighbourPatch	FanDiskBattery2_lower_other;
+		
+		patchFields
+		{
+		     nut
+		     {
+		          type		cyclic;
+		     }
+		     k
+		     {
+		          type		cyclic;
+		     }
+		     omega
+		     {
+		          type		cyclic;
+		     }
+		     U
+		     {
+		          type		cyclic;
+		     }
+		     p
+		     {
+		          type		fan;
+		          value           uniform 0;
+			  jumpTable       csvFile;
+			  jumpTableCoeffs
+			  {
+			       nHeaderLine     1;
+			       refColumn       0;
+			       componentColumns 1(1);
+			       separator       ",";
+			       mergeSeparators no;
+			       file            "$FOAM_CASE/constant/fanCurve_battery.csv";
+			  }
+		     }
+		}
+            	
+            }
+            slave
+            {
+            	name		FanDiskBattery2_lower_other;
+            	type            fan;
+		patchType       cyclic;
+		neighbourPatch	FanDiskBattery2_lower;
+		
+		patchFields
+		{
+		     nut
+		     {
+		          type		cyclic;
+		     }
+		     k
+		     {
+		          type		cyclic;
+		     }
+		     omega
+		     {
+		          type		cyclic;
+		     }
+		     U
+		     {
+		          type		cyclic;
+		     }
+		     p
+		     {
+		          type		fan;
+		          value           uniform 0;
+			  jumpTable       csvFile;
+			  jumpTableCoeffs
+			  {
+			       nHeaderLine     1;
+			       refColumn       0;
+			       componentColumns 1(1);
+			       separator       ",";
+			       mergeSeparators no;
+			       file            "$FOAM_CASE/constant/fanCurve_battery.csv";
+			  }
+		     }
+		}
+            	
+            }
+        }
+    }
+}*/

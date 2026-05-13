@@ -1,0 +1,75 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  8                                     |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// CORRETTO: rimossa la lib forceCoeffsModified.so che non esiste e causa
+// warning su tutti i 12 processor ad ogni step (decompose, solve, reconstruct)
+// libs ( "forceCoeffsModified.so" );
+
+#include        "../initialConditions"
+
+application     adjointOptimisationFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         35;
+
+deltaT          1;
+
+writeControl    timeStep;
+
+writeInterval   1;
+
+// CORRETTO: purgeWrite 0 per mantenere tutti i timestep scritti.
+// Con purgeWrite 1 si perdeva il timestep 0 (baseline) e non era possibile
+// confrontare geometria iniziale e ottimizzata in ParaView.
+purgeWrite      0;
+
+writeFormat     binary;
+
+writePrecision  6;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+functions
+{
+    // CORRETTO: tutte le functions incompatibili con adjointOptimisationFoam
+    // sono commentate. Questo solver gestisce internamente le sue quantità.
+    // Riabitarle solo per run simpleFoam standalone di post-processing.
+    
+    #include "functions/residuals"
+    // #include "functions/readFields"
+    // #include "functions/forceCoeffs"
+    // #include "functions/forces"
+    // #include "functions/meanFields"
+    // #include "functions/nearWallFields"
+    // #include "functions/wallShearStresses"
+    // #include "functions/vorticity"
+    // #include "functions/Q"
+    // #include "functions/Lambda2"
+    // #include "functions/yPlus"
+}
+
+// ************************************************************************* //

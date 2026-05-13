@@ -1,0 +1,60 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      Ua;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    inlet
+    {
+        // adjointInletVelocity: BC adjoint-specifica per l'inlet
+        // gestisce automaticamente la condizione di flusso adjoint
+        type            adjointInletVelocity;
+        value           uniform (0 0 0);
+    }
+    outlet
+    {
+        // adjointOutletVelocity: BC adjoint-specifica per l'outlet
+        type            adjointOutletVelocity;
+        inletValue      uniform (0 0 0);
+        value           uniform (0 0 0);
+    }
+    ground
+    {
+        // Parete inferiore: adjointWallVelocity
+        type            adjointWallVelocity;
+        value           uniform (0 0 0);
+    }
+    "(side|top)"
+    {
+        type            symmetryPlane;
+    }
+    symmetry
+    {
+        type            symmetryPlane;
+    }
+    DP_FW
+    {
+        // CRITICO: adjointWallVelocity è la BC che inietta il gradiente
+        // della funzione obiettivo (drag) nel sistema adjoint.
+        // fixedValue (0 0 0) non lo faceva → b=0 → residui sempre zero.
+        type            adjointWallVelocity;
+        value           uniform (0 0 0);
+    }
+}
+// ************************************************************************* //

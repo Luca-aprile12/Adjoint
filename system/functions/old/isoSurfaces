@@ -1,0 +1,108 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  4.1                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+#include        "../../initialConditions"
+isoSurfaces
+{
+    type            surfaces;
+    libs ("libsampling.so");
+    writeControl    writeTime;
+
+    surfaceFormat   vtk;
+    fields          ( p mag(U) mag(vorticity));
+
+    interpolationScheme cellPoint;
+
+    surfaces
+    (
+
+isoPressure_1
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        p;
+        isoValue        $p1;
+        interpolate     true;
+    }
+
+isoPressure_2
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        p;
+        isoValue        $p2;
+        interpolate     true;
+    }
+
+isoPressure_3
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        p;
+        isoValue        $p3;
+        interpolate     true;
+    }
+
+isoVelocity_1
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        mag(U);
+        isoValue        $U1;
+        interpolate     true;
+    }
+
+isoVelocity_2
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        mag(U);
+        isoValue        $U2;
+        interpolate     true;
+    }
+
+isoVelocity_3
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        mag(U);
+        isoValue        $U3;
+        interpolate     true;
+    }
+
+isoVorticity_1
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        mag(vorticity);
+        isoValue        $v1;
+        interpolate     true;
+    }
+
+isoVorticity_2
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        mag(vorticity);
+        isoValue        $v2;
+        interpolate     true;
+    }
+
+isoVorticity_3
+    {
+        // Iso surface for interpolated values only
+        type            isoSurface;    // always triangulated
+        isoField        mag(vorticity);
+        isoValue        $v3;
+        interpolate     true;
+    }
+
+    );
+
+}
+
+// *********************************************************************** //

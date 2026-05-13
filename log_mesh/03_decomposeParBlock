@@ -1,0 +1,217 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : decomposePar -force -latestTime
+Date   : May 01 2026
+Time   : 21:20:07
+Host   : luca
+PID    : 84169
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+
+
+Decomposing mesh
+
+Create mesh
+
+Calculating distribution of cells
+Decomposition method scotch [12] (region region0)
+
+Finished decomposition in 0.05 s
+
+Calculating original mesh data
+
+Distributing cells to processors
+
+Distributing faces to processors
+
+Distributing points to processors
+
+Constructing processor meshes
+
+Processor 0
+    Number of cells = 1682
+    Number of points = 2207
+    Number of faces shared with processor 1 = 131
+    Number of faces shared with processor 2 = 128
+    Number of faces shared with processor 3 = 48
+    Number of faces shared with processor 5 = 112
+    Number of processor patches = 4
+    Number of processor faces = 419
+    Number of boundary faces = 547
+
+Processor 1
+    Number of cells = 1681
+    Number of points = 2173
+    Number of faces shared with processor 0 = 131
+    Number of faces shared with processor 2 = 169
+    Number of faces shared with processor 3 = 123
+    Number of faces shared with processor 4 = 30
+    Number of faces shared with processor 5 = 20
+    Number of processor patches = 5
+    Number of processor faces = 473
+    Number of boundary faces = 433
+
+Processor 2
+    Number of cells = 1664
+    Number of points = 2128
+    Number of faces shared with processor 0 = 128
+    Number of faces shared with processor 1 = 169
+    Number of faces shared with processor 4 = 98
+    Number of faces shared with processor 5 = 32
+    Number of processor patches = 4
+    Number of processor faces = 427
+    Number of boundary faces = 427
+
+Processor 3
+    Number of cells = 1666
+    Number of points = 2194
+    Number of faces shared with processor 0 = 48
+    Number of faces shared with processor 1 = 123
+    Number of faces shared with processor 4 = 115
+    Number of faces shared with processor 5 = 137
+    Number of faces shared with processor 10 = 84
+    Number of faces shared with processor 11 = 64
+    Number of processor patches = 6
+    Number of processor faces = 571
+    Number of boundary faces = 399
+
+Processor 4
+    Number of cells = 1651
+    Number of points = 2143
+    Number of faces shared with processor 1 = 30
+    Number of faces shared with processor 2 = 98
+    Number of faces shared with processor 3 = 115
+    Number of faces shared with processor 5 = 182
+    Number of faces shared with processor 9 = 88
+    Number of faces shared with processor 11 = 74
+    Number of processor patches = 6
+    Number of processor faces = 587
+    Number of boundary faces = 317
+
+Processor 5
+    Number of cells = 1682
+    Number of points = 2182
+    Number of faces shared with processor 0 = 112
+    Number of faces shared with processor 1 = 20
+    Number of faces shared with processor 2 = 32
+    Number of faces shared with processor 3 = 137
+    Number of faces shared with processor 4 = 182
+    Number of faces shared with processor 9 = 65
+    Number of faces shared with processor 10 = 80
+    Number of faces shared with processor 11 = 5
+    Number of processor patches = 8
+    Number of processor faces = 633
+    Number of boundary faces = 287
+
+Processor 6
+    Number of cells = 1650
+    Number of points = 2157
+    Number of faces shared with processor 7 = 120
+    Number of faces shared with processor 8 = 114
+    Number of faces shared with processor 9 = 146
+    Number of faces shared with processor 10 = 9
+    Number of processor patches = 4
+    Number of processor faces = 389
+    Number of boundary faces = 543
+
+Processor 7
+    Number of cells = 1678
+    Number of points = 2144
+    Number of faces shared with processor 6 = 120
+    Number of faces shared with processor 8 = 164
+    Number of faces shared with processor 9 = 2
+    Number of faces shared with processor 10 = 125
+    Number of faces shared with processor 11 = 19
+    Number of processor patches = 5
+    Number of processor faces = 430
+    Number of boundary faces = 428
+
+Processor 8
+    Number of cells = 1680
+    Number of points = 2146
+    Number of faces shared with processor 6 = 114
+    Number of faces shared with processor 7 = 164
+    Number of faces shared with processor 9 = 14
+    Number of faces shared with processor 11 = 137
+    Number of processor patches = 4
+    Number of processor faces = 429
+    Number of boundary faces = 429
+
+Processor 9
+    Number of cells = 1663
+    Number of points = 2186
+    Number of faces shared with processor 4 = 88
+    Number of faces shared with processor 5 = 65
+    Number of faces shared with processor 6 = 146
+    Number of faces shared with processor 7 = 2
+    Number of faces shared with processor 8 = 14
+    Number of faces shared with processor 10 = 130
+    Number of faces shared with processor 11 = 117
+    Number of processor patches = 7
+    Number of processor faces = 562
+    Number of boundary faces = 400
+
+Processor 10
+    Number of cells = 1653
+    Number of points = 2146
+    Number of faces shared with processor 3 = 84
+    Number of faces shared with processor 5 = 80
+    Number of faces shared with processor 6 = 9
+    Number of faces shared with processor 7 = 125
+    Number of faces shared with processor 9 = 130
+    Number of faces shared with processor 11 = 169
+    Number of processor patches = 6
+    Number of processor faces = 597
+    Number of boundary faces = 309
+
+Processor 11
+    Number of cells = 1650
+    Number of points = 2121
+    Number of faces shared with processor 3 = 64
+    Number of faces shared with processor 4 = 74
+    Number of faces shared with processor 5 = 5
+    Number of faces shared with processor 7 = 19
+    Number of faces shared with processor 8 = 137
+    Number of faces shared with processor 9 = 117
+    Number of faces shared with processor 10 = 169
+    Number of processor patches = 7
+    Number of processor faces = 585
+    Number of boundary faces = 281
+
+Number of processor faces = 3051
+Max number of cells = 1682 (0.92% above average 1666.67)
+Max number of processor patches = 8 (45.4545% above average 5.5)
+Max number of faces between processors = 633 (24.4838% above average 508.5)
+
+Time = 0
+
+Processor 0: field transfer
+Processor 1: field transfer
+Processor 2: field transfer
+Processor 3: field transfer
+Processor 4: field transfer
+Processor 5: field transfer
+Processor 6: field transfer
+Processor 7: field transfer
+Processor 8: field transfer
+Processor 9: field transfer
+Processor 10: field transfer
+Processor 11: field transfer
+
+End
+

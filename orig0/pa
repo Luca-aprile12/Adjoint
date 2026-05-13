@@ -1,0 +1,58 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      pa;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    inlet
+    {
+        // Inlet: zeroGradient — stesso del tutorial motorBike
+        // Il gradiente di pa è zero all'ingresso del dominio adjoint
+        type            zeroGradient;
+    }
+    outlet
+    {
+        // adjointFarFieldPressure: BC adjoint-specifica per l'outlet
+        // corrisponde alla condizione di far-field per la pressione adjoint
+        // il tutorial motorBike usa questo tipo all'uscita del dominio
+        type            adjointFarFieldPressure;
+        value           uniform 0;
+    }
+    ground
+    {
+        type            zeroGradient;
+    }
+    "(side|top)"
+    {
+        type            symmetryPlane;
+    }
+    symmetry
+    {
+        type            symmetryPlane;
+    }
+    DP_FW
+    {
+        // Parete oggettivo: zeroGradient di base
+        // il framework aggiunge automaticamente il contributo dJ/dp
+        type            zeroGradient;
+    }
+}
+
+// ************************************************************************* //

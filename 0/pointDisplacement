@@ -1,0 +1,57 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       pointVectorField; // Attenzione: point, non vol!
+    location    "0";
+    object      pointDisplacement;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 0 0 0 0 0];
+
+// All'inizio, lo spostamento di tutta l'aria nel tunnel è zero
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    outlet
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    ground
+    {
+        // L'asfalto scorre, ma non si "deforma" verticalmente
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    "(side|top)"
+    {
+        type            symmetryPlane;
+    }
+    symmetry
+    {
+        type            symmetryPlane;
+    }
+    DP_FW
+    {
+        // Qui avviene la magia! Diciamo a OpenFOAM che questo
+        // spostamento sarà calcolato dall'Intelligenza Artificiale
+        type            calculated;
+        value           uniform (0 0 0);
+    }
+}
+// ************************************************************************* //

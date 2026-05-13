@@ -1,0 +1,36 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2112                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+meanFields
+{
+    type                fieldAverage;
+    libs                ("libfieldFunctionObjects.so");
+
+    fields
+    (
+        U{
+            mean		yes;
+            prime2Mean		no;
+            base 		iteration;
+        }
+
+        p{
+            mean        	yes;
+            prime2Mean  	no;
+            base		iteration;
+        }
+    );
+    writeControl        writeTime;
+    enabled		true;
+    log                 false;
+
+    periodicRestart     true;
+    restartPeriod       100;
+}
+
+// *********************************************************************** //

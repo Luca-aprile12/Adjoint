@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo -e "Cleaning stuff"
+	rm -fr [0-9]* # clean previous timesteps
+	rm -fr processor* allProcessors log* postProcessing coefficients dynamicCode slices VTK
+echo -e "  --> Done"

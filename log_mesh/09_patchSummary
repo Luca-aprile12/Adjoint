@@ -1,0 +1,115 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : patchSummary
+Date   : May 01 2026
+Time   : 21:33:52
+Host   : luca
+PID    : 84805
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+Time = 0
+
+Reading fields:
+    volScalarField (k ka nSurfaceLayers nut nuta omega p pa thickness thicknessFraction wa)
+    volVectorField (U Ua)
+    pointVectorField (pointDisplacement)
+
+group	: symmetryPlane
+    scalar		k		symmetryPlane
+    scalar		ka		symmetryPlane
+    scalar		nSurfaceLayers		symmetryPlane
+    scalar		nut		symmetryPlane
+    scalar		nuta		symmetryPlane
+    scalar		omega		symmetryPlane
+    scalar		p		symmetryPlane
+    scalar		pa		symmetryPlane
+    scalar		thickness		symmetryPlane
+    scalar		thicknessFraction		symmetryPlane
+    scalar		wa		symmetryPlane
+    vector		U		symmetryPlane
+    vector		Ua		symmetryPlane
+    vector		pointDisplacement		symmetryPlane
+
+patch	: inlet
+    scalar		k		fixedValue
+    scalar		ka		zeroGradient
+    scalar		nSurfaceLayers		fixedValue
+    scalar		nut		calculated
+    scalar		nuta		zeroGradient
+    scalar		omega		fixedValue
+    scalar		p		zeroGradient
+    scalar		pa		zeroGradient
+    scalar		thickness		fixedValue
+    scalar		thicknessFraction		fixedValue
+    scalar		wa		zeroGradient
+    vector		U		fixedValue
+    vector		Ua		generic
+    vector		pointDisplacement		fixedValue
+
+patch	: outlet
+    scalar		k		inletOutlet
+    scalar		ka		fixedValue
+    scalar		nSurfaceLayers		fixedValue
+    scalar		nut		calculated
+    scalar		nuta		fixedValue
+    scalar		omega		inletOutlet
+    scalar		p		fixedValue
+    scalar		pa		generic
+    scalar		thickness		fixedValue
+    scalar		thicknessFraction		fixedValue
+    scalar		wa		fixedValue
+    vector		U		inletOutlet
+    vector		Ua		generic
+    vector		pointDisplacement		fixedValue
+
+wall	: ground
+    scalar		k		generic
+    scalar		ka		zeroGradient
+    scalar		nSurfaceLayers		fixedValue
+    scalar		nut		generic
+    scalar		nuta		zeroGradient
+    scalar		omega		generic
+    scalar		p		zeroGradient
+    scalar		pa		zeroGradient
+    scalar		thickness		fixedValue
+    scalar		thicknessFraction		fixedValue
+    scalar		wa		zeroGradient
+    vector		U		translatingWallVelocity
+    vector		Ua		generic
+    vector		pointDisplacement		fixedValue
+
+wall	: DP_FW
+    scalar		k		generic
+    scalar		ka		fixedValue
+    scalar		nSurfaceLayers		fixedValue
+    scalar		nut		generic
+    scalar		nuta		fixedValue
+    scalar		omega		generic
+    scalar		p		zeroGradient
+    scalar		pa		zeroGradient
+    scalar		thickness		fixedValue
+    scalar		thicknessFraction		fixedValue
+    scalar		wa		fixedValue
+    vector		U		fixedValue
+    vector		Ua		generic
+    vector		pointDisplacement		calculated
+
+End
+

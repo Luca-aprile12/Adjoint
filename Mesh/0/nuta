@@ -1,0 +1,55 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      nuta;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Campo adjoint di nut (viscosità turbolenta adjoint)
+// Calcolato internamente dal solver, questo file serve solo come inizializzazione
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    inlet
+    {
+        type            zeroGradient;
+    }
+    outlet
+    {
+        type            fixedValue;
+        value           uniform 0;
+    }
+    ground
+    {
+        type            zeroGradient;
+    }
+    "(side|top)"
+    {
+        type            symmetryPlane;
+    }
+    symmetry
+    {
+        type            symmetryPlane;
+    }
+    DP_FW
+    {
+        type            fixedValue;
+        value           uniform 0;
+    }
+}
+
+// ************************************************************************* //

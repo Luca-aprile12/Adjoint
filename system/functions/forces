@@ -1,0 +1,267 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  3.0.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+#include	"../../initialConditions"
+DP_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     (  "DP_.*"  );
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompretimeInterval    $iterations;ssible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+    porosity    false;
+}
+DP_FW_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     ( DP_FW );
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+DP_RW_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     ( DP_RW );
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+
+
+DP_Diffuser_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     ( DP_Diffuser );
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+DP_Undertray_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     ( DP_Undertray );
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+DP_Monocoque_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     ( DP_Monocoque DP_MotFL DP_MotFR DP_MotRL DP_MotRR);
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+DP_Susp_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     ( DP_Susp DP_Upright);
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+DP_Tyre_Plinth_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+executeControl   	writeTime;
+
+    log         false;
+
+    patches     ( DP_Tyre_Plinth);
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+DP_FL_Wheel_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+    executeControl   	writeTime;
+
+    log         false;
+
+    patches     (DP_FL_Wheel);
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+
+}
+DP_FR_Wheel_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+    executeControl   	writeTime;
+
+    log         false;
+
+    patches     (DP_FR_Wheel);
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+
+}
+DP_RL_Wheel_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+    executeControl   	writeTime;
+
+    log         false;
+
+    patches     (DP_RL_Wheel);
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+DP_RR_Wheel_forces
+{
+    type        forces;
+
+    libs ( "libforces.so" );
+
+    writeControl    	writeTime;
+    executeControl   	writeTime;
+
+    log         false;
+
+    patches     (DP_RR_Wheel);
+    pName       p;
+    UName       Urel;
+    rhoName     rho;
+    rhoInf      $rho;          // Redundant for incompressible
+    rho         rhoInf;     // Indicates incompressible
+
+    CofR        $CR;    // Rotation centre
+    pitchAxis   $pitch;
+}
+
+// ************************************************************************* //

@@ -1,0 +1,28 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  8                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      wallShearStress;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+wallShearStress
+{
+    	type             wallShearStress;
+    	libs             ("libfieldFunctionObjects.so");
+    	patches          ( "DP_.*" );
+    	field           	UMean;
+	result			wallShearStress;
+      	writeControl    	writeTime;
+      	executeControl   	writeTime;
+}
+
+// ************************************************************************* //

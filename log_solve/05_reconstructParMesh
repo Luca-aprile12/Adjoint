@@ -1,0 +1,232 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : reconstructParMesh -constant
+Date   : May 13 2026
+Time   : 03:02:33
+Host   : luca
+PID    : 27688
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Merge individual processor meshes back into one master mesh.
+Use if the original master mesh has been deleted or the processor meshes
+have been modified (topology change).
+This tool will write the resulting mesh to a new time step and construct
+xxxxProcAddressing files in the processor meshes so reconstructPar can be
+used to regenerate the fields on the master mesh.
+
+Not well tested & use at your own risk!
+
+Merge assuming correct, fully matched procBoundaries.
+
+Found 12 processor directories
+    Reading database "DP_FW_adj/processor0"
+    Reading database "DP_FW_adj/processor1"
+    Reading database "DP_FW_adj/processor2"
+    Reading database "DP_FW_adj/processor3"
+    Reading database "DP_FW_adj/processor4"
+    Reading database "DP_FW_adj/processor5"
+    Reading database "DP_FW_adj/processor6"
+    Reading database "DP_FW_adj/processor7"
+    Reading database "DP_FW_adj/processor8"
+    Reading database "DP_FW_adj/processor9"
+    Reading database "DP_FW_adj/processor10"
+    Reading database "DP_FW_adj/processor11"
+
+Time = constant
+
+
+Writing merged mesh to "constant/polyMesh"
+
+Reconstructing addressing from processor meshes to the newly reconstructed mesh
+
+Processor 0
+Read processor mesh: "DP_FW_adj/processor0"
+Writing addressing : "DP_FW_adj/processor0/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 1
+Read processor mesh: "DP_FW_adj/processor1"
+Writing addressing : "DP_FW_adj/processor1/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 2
+Read processor mesh: "DP_FW_adj/processor2"
+Writing addressing : "DP_FW_adj/processor2/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 3
+Read processor mesh: "DP_FW_adj/processor3"
+Writing addressing : "DP_FW_adj/processor3/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 4
+Read processor mesh: "DP_FW_adj/processor4"
+Writing addressing : "DP_FW_adj/processor4/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 5
+Read processor mesh: "DP_FW_adj/processor5"
+Writing addressing : "DP_FW_adj/processor5/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 6
+Read processor mesh: "DP_FW_adj/processor6"
+Writing addressing : "DP_FW_adj/processor6/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 7
+Read processor mesh: "DP_FW_adj/processor7"
+Writing addressing : "DP_FW_adj/processor7/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 8
+Read processor mesh: "DP_FW_adj/processor8"
+Writing addressing : "DP_FW_adj/processor8/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 9
+Read processor mesh: "DP_FW_adj/processor9"
+Writing addressing : "DP_FW_adj/processor9/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 10
+Read processor mesh: "DP_FW_adj/processor10"
+Writing addressing : "DP_FW_adj/processor10/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Processor 11
+Read processor mesh: "DP_FW_adj/processor11"
+Writing addressing : "DP_FW_adj/processor11/constant/polyMesh"
+    pointProcAddressing
+    faceProcAddressing
+    cellProcAddressing
+    boundaryProcAddressing
+
+Time = 1
+No meshes
+
+Time = 2
+No meshes
+
+Time = 3
+No meshes
+
+Time = 4
+No meshes
+
+Time = 5
+No meshes
+
+Time = 6
+No meshes
+
+Time = 7
+No meshes
+
+Time = 8
+No meshes
+
+Time = 9
+No meshes
+
+Time = 10
+No meshes
+
+Time = 11
+No meshes
+
+Time = 12
+No meshes
+
+Time = 13
+No meshes
+
+Time = 14
+No meshes
+
+Time = 15
+No meshes
+
+Time = 16
+No meshes
+
+Time = 17
+No meshes
+
+Time = 18
+No meshes
+
+Time = 19
+No meshes
+
+Time = 20
+No meshes
+
+Time = 21
+No meshes
+
+Time = 22
+No meshes
+
+Time = 23
+No meshes
+
+Time = 24
+No meshes
+
+Time = 25
+No meshes
+
+Time = 26
+No meshes
+
+End
+

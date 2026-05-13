@@ -1,0 +1,98 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "(p|pa)"
+    {
+        solver          GAMG;
+        smoother        GaussSeidel;
+        tolerance       1e-7;
+        relTol          0.01;
+    }
+
+    Phi
+    {
+        $p;
+    }
+
+    // ma: adjoint mesh movement (per shapeFI/shapeESI con includeMeshMovement)
+    // Manuale sez.4: NO relaxation per ma.
+    ma
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-9;
+        relTol          0.01;
+    }
+
+    // Primal + adjoint velocity — wildcard copre U, Ua, Up1, Uap1 ecc.
+    "(U|Ua|k|omega)"
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        tolerance       1e-8;
+        relTol          0.1;
+        nSweeps         1;
+    }
+
+    // AGGIUNTO: adjoint turbolenza (necessari quando adjointTurbulence on)
+    // Manuale sez.4: relaxation ~0.1 per variabili adjoint turbolenti
+    // in casi industriali.
+    "(ka|wa)"
+    {
+        solver          smoothSolver;
+        smoother        GaussSeidel;
+        tolerance       1e-8;
+        relTol          0.1;
+        nSweeps         1;
+    }
+}
+
+potentialFlow
+{
+    nNonOrthogonalCorrectors 10;
+}
+
+// Relaxation factors — manuale sez.4:
+// Primal: p=0.3, U=0.7 (tipico simpleFoam)
+// Adjoint: pa=0.7, Ua=0.3 (INVERTITI rispetto al primal)
+// Adjoint turbolenza: ~0.1 per casi industriali
+relaxationFactors
+{
+    fields
+    {
+        "p.*"    0.3;
+        "pa.*"   0.7;
+    }
+    equations
+    {
+        U        0.7;
+        Ua       0.3;
+        k        0.5;
+        omega    0.5;
+        // Adjoint turbolenza (valori conservativi — abbassare se instabile)
+        ka       0.3;
+        wa       0.3;
+    }
+}
+
+cache
+{
+    grad(U);
+}
+
+// ************************************************************************* //

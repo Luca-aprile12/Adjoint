@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  8                                     |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      vorticity;
+}
+
+fileUpdate1
+{
+    type              timeActivatedFileUpdate;
+    libs              ("libutilityFunctionObjects.so");
+    writeControl      timeStep;
+    writeInterval     1;
+    fileToUpdate      "$FOAM_CASE/system/fvSchemes";
+    timeVsFile
+    (
+    
+        (-1   "$FOAM_CASE/system/fvSchemes")
+        (600 "$FOAM_CASE/system/fvSchemes_2")
+
+    );
+
+}
+
+fileUpdate2
+{
+    type              timeActivatedFileUpdate;
+    libs              ("libutilityFunctionObjects.so");
+    writeControl      timeStep;
+    writeInterval     1;
+    fileToUpdate      "$FOAM_CASE/system/fvSolution";
+    timeVsFile
+    (
+    
+        (-1   "$FOAM_CASE/system/fvSolution")
+        (600 "$FOAM_CASE/system/fvSolution_2")
+        (1200 "$FOAM_CASE/system/fvSolution_3")
+
+    );
+
+}

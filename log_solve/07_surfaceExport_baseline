@@ -1,0 +1,77 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : surfaceMeshExtract -time 0 Export_CAD/baseline_split/full.stl
+Date   : May 13 2026
+Time   : 03:05:50
+Host   : luca
+PID    : 27731
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Extracting surface from boundaryMesh ...
+
+Including all processor patches.
+
+Reading mesh from time 26
+Create polyMesh for time = 26
+
+
+--> FOAM FATAL ERROR: (openfoam-2312 patch=260127)
+Symmetry plane 'symmetry' is not planar.
+At local face at (-0.581556 0.000622547 0.418594) the normal (0.00192645 -0.995246 -0.0973784) differs from the average normal (0.00800902 -0.997439 0.0262307) by 0.015321
+Either split the patch into planar parts or use the symmetry patch type
+
+    From virtual void Foam::symmetryPlanePolyPatch::calcGeometry(Foam::PstreamBuffers&)
+    in file meshes/polyMesh/polyPatches/constraint/symmetryPlane/symmetryPlanePolyPatch.C at line 67.
+
+FOAM exiting
+
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : surfaceSplitByPatch Export_CAD/baseline_split/full.stl
+Date   : May 13 2026
+Time   : 03:05:51
+Host   : luca
+PID    : 27732
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+Read surface from "Export_CAD/baseline_split/full.stl" ...
+
+
+
+--> FOAM FATAL ERROR: (openfoam-2312 patch=260127)
+Cannot read file "Export_CAD/baseline_split/full.stl" or file "Export_CAD/baseline_split/full.stl.gz"
+
+    From static int Foam::fileFormats::STLCore::detectBinaryHeader(const Foam::fileName&)
+    in file stl/STLCore.C at line 132.
+
+FOAM exiting
+

@@ -1,0 +1,209 @@
+#!/bin/bash
+
+# Definizione dei colori
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# ==========================================
+# 1. CONTROLLO PULIZIA
+# ==========================================
+echo -e -n "${RED}Are you sure you want to clean this case and start the simulation? This action is irreversible. (y/n): ${NC}"
+read confirm
+
+if [[ "$confirm" != [yY] && "$confirm" != [yY][eE][sS] ]]; then
+    echo -e "Aborted. Your files are safe."
+    return 0 2>/dev/null || exit 0
+fi
+
+# ==========================================
+# 2. CONTROLLO SPAZIO SU DISCO
+# ==========================================
+echo -e "\n--- DISK SPACE INFO ---"
+# Mostra l'intestazione e la riga relativa al disco della cartella corrente
+df -h . | awk 'NR==1 || NR==2'
+echo -e "-----------------------\n"
+
+echo -e -n "${RED}Do you have enough disk space to proceed? (y/n): ${NC}"
+read confirm_space
+
+if [[ "$confirm_space" != [yY] && "$confirm_space" != [yY][eE][sS] ]]; then
+    echo -e "Simulation aborted."
+    return 0 2>/dev/null || exit 0
+fi
+
+echo -e "\nSTART AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S) "\n"
+
+# Notifica inizio mesh
+if [ -f "config/ntfy/StartMesh/invia_notifica.sh" ]; then
+	bash config/ntfy/StartMesh/invia_notifica.sh &
+fi
+
+rm -fr extendedFeature* trisurface/*.eMesh log_mesh processor* allProcessors allProcessors_mesh
+rm -fr constant/polyMesh dynamicCode 0
+mkdir -p log_mesh
+cp -r orig0 0
+
+# ==================== CORES LOADING ===========================
+# load np directly from initialConditions, no need for Processors file
+mock="$(grep 'np' initialConditions | awk '{print $2}')"
+np=${mock:0:${#mock}-1}
+# ================================================================
+
+notifica_start_mesh
+
+echo -e "\nExtracting features";
+	surfaceFeatureExtract > log_mesh/01_surfaceFeatures
+echo "  --> Done";
+
+echo -e "\nBlockMesh";
+	blockMesh > log_mesh/02_blockMesh
+echo "  --> Done";
+
+echo -e "\nDecomposing case for " $np 'processor(s)';
+	decomposePar -force -latestTime> log_mesh/03_decomposeParBlock
+echo "  --> Done";
+
+echo -e "\nChecking the block mesh";
+	mpirun -np $np checkMesh -allTopology -allGeometry -parallel > log_mesh/04_checkMeshBlock
+echo "  --> Done";
+
+echo -e "\nsnappyHexMesh";
+	mpirun -np $np snappyHexMesh -overwrite -parallel > log_mesh/05_snappyHexMesh
+echo "  --> Done";
+
+echo -e "\nChecking the mesh";
+	mpirun -np $np checkMesh -allTopology -allGeometry -parallel > log_mesh/06_checkMesh
+echo "  --> Done";
+
+echo -e "\nreconstructParMesh";
+	reconstructParMesh -constant -fullMatch -mergeTol 1e-10 > log_mesh/07_reconstructParMesh
+echo "  --> Done";
+
+echo -e "\nreconstructPar";
+	reconstructPar -constant -withZero -fields '(cellLevel pointLevel nSurfaceLayers thickness thicknessFraction)' > log_mesh/08_reconstructParBC
+echo "  --> Done";
+
+echo -e "\nPatchSummary";
+	patchSummary > log_mesh/09_patchSummary
+echo "  --> Done";
+
+notifica_end_mesh
+#echo -e "\ncreateBaffles";
+#	createBaffles -dict system/createBafflesDict -overwrite > log_mesh/10_createBaffles
+#echo "	--> Done";
+
+
+rm -fr Mesh
+mkdir Mesh
+cp -r 0 Mesh
+
+
+mkdir allProcessors_mesh
+mv processor* ./allProcessors_mesh
+rm -fr dynamicCode
+
+
+echo -e "\nEND AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S)
+
+# Notifica fine mesh
+if [ -f "config/ntfy/EndMesh/invia_notifica.sh" ]; then
+	bash config/ntfy/EndMesh/invia_notifica.sh
+fi
+
+echo -e "\nSTART AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S) "\n"
+
+# Notifica inizio solve
+if [ -f "config/ntfy/StartSolve/invia_notifica.sh" ]; then
+	bash config/ntfy/StartSolve/invia_notifica.sh &
+fi
+
+echo -e "Cleaning previous stuff"
+	rm -fr [0-9]* # clean previous timesteps
+	rm -fr processor* log_solve postProcessing VTK
+	cp -r orig0 ./0
+	mkdir log_solve
+echo -e "  --> Done"
+
+# ==================== CORES LOADING ===========================
+# load np directly from initialConditions, no need for Processors file
+mock="$(grep 'np' initialConditions | awk '{print $2}')"
+np=${mock:0:${#mock}-1}
+# ================================================================
+
+echo -e "\nDecomposing case for " $np 'processor(s)';
+	decomposePar > log_solve/01_decomposePar
+echo "  --> Done";
+
+echo -e "\nRenumbering mesh";
+	mpirun -np $np renumberMesh -overwrite -latestTime -parallel > log_solve/02_renumberMesh
+echo "  --> Done";
+
+echo -e "\nSolving potentialFoam";
+	mpirun -np $np potentialFoam -parallel > log_solve/03_potentialFoam
+echo -e "  --> Done";
+
+notifica_start_solve
+
+echo -e "\nSolving simpleFoam";
+	mpirun -np $np simpleFoam -parallel > log_solve/04_simpleFoam
+echo -e "  --> Done";
+
+echo -e "\nPostprocessing:"
+# echo "	functionObjects"
+#	simpleFoam -postProcess -latestTime -parallel > log_solve/05_functionObjects
+echo "	Lambda2"
+	mpirun -np $np postProcess -func "Lambda2" -latestTime -parallel > log_solve/06_Lambda2
+echo "	totalPressureIncompressible"
+	mpirun -np $np postProcess -func "totalPressureIncompressible(p,U,rhoInf=1.225)" -latestTime -parallel > log_solve/07_totalPressureIncompressible
+echo "	mag(vorticity)"
+	mpirun -np $np postProcess -func "mag(vorticity)" -latestTime -parallel > log_solve/08_magVorticity
+echo -e "  --> Done";
+
+echo -e "\nReconstructing case";
+	reconstructPar -latestTime > log_solve/10_reconstructPar
+echo "  --> Done";
+
+echo -e "\nReconstructing fields";
+	reconstructPar -withZero -fields '(phi)' -latestTime > log_solve/11_reconstructPar0
+echo "  --> Done";
+
+echo -e "\nZipping processors to free some space";
+
+mkdir allProcessors
+
+mv processor* ./allProcessors
+
+#echo -e "\nfoamToVTK";
+#	foamToVTK -latestTime > log_solve/13_foamToVTK
+#echo "  --> Done";
+
+touch /home/$USER/OpenFOAM/pietro-v2312/run/ended.txt
+
+echo -e "\nEND AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S)
+
+notifica_end_solve
+
+# Notifica fine solve
+notifica_start_mesh() {
+	if [ -f "config/ntfy/StartMesh/invia_notifica.sh" ]; then
+		bash config/ntfy/StartMesh/invia_notifica.sh &
+	fi
+}
+
+notifica_end_mesh() {
+	if [ -f "config/ntfy/EndMesh/invia_notifica.sh" ]; then
+		bash config/ntfy/EndMesh/invia_notifica.sh
+	fi
+}
+
+notifica_start_solve() {
+	if [ -f "config/ntfy/StartSolve/invia_notifica.sh" ]; then
+		bash config/ntfy/StartSolve/invia_notifica.sh &
+	fi
+}
+
+notifica_end_solve() {
+	if [ -f "config/ntfy/EndSolve/invia_notifica.sh" ]; then
+		bash config/ntfy/EndSolve/invia_notifica.sh
+	fi
+}

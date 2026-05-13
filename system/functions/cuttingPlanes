@@ -1,0 +1,135 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  4.1                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+#include        "../../initialConditions"
+cuttingPlanes
+{
+    type            surfaces;
+    libs ("libsampling.so");
+    writeControl    writeTime;
+
+    surfaceFormat   vtk;
+    fields          ( p U vorticity total(p) );
+
+    interpolationScheme cellPoint;
+
+    surfaces
+    (
+
+        plane_z1
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       (0.0 0.0 $z1);
+                     normalVector    (0 0 1);
+                }
+                interpolate     true;
+            }
+
+        plane_z2
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       (0.0 0.0 $z2);
+                     normalVector    (0 0 1);
+                }
+                interpolate     true;
+            }
+
+        plane_y1
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       (0.0 $y1 0.0);
+                     normalVector    (0 1 0);
+                }
+                interpolate     true;
+            }
+
+        plane_y2
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       (0.0 $y2 0.0);
+                     normalVector    (0 1 0);
+                }
+                interpolate     true;
+            }
+
+        plane_y3
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       (0.0 $y3 0.500);
+                     normalVector    (0 1 0);
+                }
+                interpolate     true;
+            }
+
+        plane_x1
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       ($x1 0.0 0.0);
+                     normalVector    (1 0 0);
+                }
+                interpolate     true;
+            }
+
+        plane_x2
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       ($x2 0.0 0.0);
+                     normalVector    (1 0 0);
+                }
+                interpolate     true;
+            }
+
+        plane_x3
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       ($x3 0.0 0.0);
+                     normalVector    (1 0 0);
+                }
+                interpolate     true;
+            }
+
+        plane_x4
+            {
+                type            cuttingPlane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                     basePoint       ($x4 0.0 0.0);
+                     normalVector    (1 0 0);
+                }
+                interpolate     true;
+            }
+
+    );
+}
+
+
+// ************************************************************************* //

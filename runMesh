@@ -1,0 +1,67 @@
+#!/bin/bash
+
+echo -e "\nSTART AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S) "\n"
+
+rm -fr extendedFeature* trisurface/*.eMesh log_mesh processor* allProcessors
+rm -fr constant/polyMesh dynamicCode 0
+mkdir -p log_mesh
+cp -r orig0 0
+
+# ==================== CORES LOADING ===========================
+# load np directly from initialConditions, no need for Processors file
+mock="$(grep 'np' initialConditions | awk '{print $2}')"
+np=${mock:0:${#mock}-1}
+# ================================================================
+
+echo -e "\nExtracting features";
+	surfaceFeatureExtract > log_mesh/01_surfaceFeatures
+echo "  --> Done";
+
+echo -e "\nBlockMesh";
+	blockMesh > log_mesh/02_blockMesh
+echo "  --> Done";
+
+echo -e "\nDecomposing case for " $np 'processor(s)';
+	decomposePar -force -latestTime> log_mesh/03_decomposeParBlock
+echo "  --> Done";
+
+echo -e "\nChecking the block mesh";
+	mpirun -np $np checkMesh -allTopology -allGeometry -parallel > log_mesh/04_checkMeshBlock
+echo "  --> Done";
+
+echo -e "\nsnappyHexMesh";
+	mpirun -np $np snappyHexMesh -overwrite -parallel > log_mesh/05_snappyHexMesh
+echo "  --> Done";
+
+echo -e "\nChecking the mesh";
+	mpirun -np $np checkMesh -allTopology -allGeometry -parallel > log_mesh/06_checkMesh
+echo "  --> Done";
+
+echo -e "\nreconstructParMesh";
+	reconstructParMesh -constant -fullMatch -mergeTol 1e-10 > log_mesh/07_reconstructParMesh
+echo "  --> Done";
+
+echo -e "\nreconstructPar";
+	reconstructPar -constant -withZero -fields '(cellLevel pointLevel nSurfaceLayers thickness thicknessFraction)' > log_mesh/08_reconstructParBC
+echo "  --> Done";
+
+echo -e "\nPatchSummary";
+	patchSummary > log_mesh/09_patchSummary
+echo "  --> Done";
+
+#echo -e "\ncreateBaffles";
+#	createBaffles -dict system/createBafflesDict -overwrite > log_mesh/10_createBaffles
+#echo "	--> Done";
+
+#mv 0 Mesh
+
+rm -fr Mesh
+mkdir Mesh
+cp -r 0 Mesh
+
+mkdir allProcessors
+mv processor* ./allProcessors
+rm -fr dynamicCode
+
+
+echo -e "\nEND AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S)

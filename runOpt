@@ -1,0 +1,94 @@
+#!/bin/bash
+
+echo -e "\nSTART OPTIMIZATION AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S) "\n"
+
+# 1. PULIZIA E SETUP
+echo -e "Cleaning previous stuff"
+    rm -fr [0-9]* processor* log_solve postProcessing VTK Export_CAD allProcessors
+    cp -r orig0 ./0
+    mkdir -p log_solve
+    mkdir -p Export_CAD
+echo -e "  --> Done"
+
+# ==================== CORES LOADING ===========================
+mock="$(grep 'np' initialConditions | awk '{print $2}')"
+np=${mock:0:${#mock}-1}
+# ==============================================================
+
+# 2. DECOMPOSIZIONE
+echo -e "\nDecomposing case for " $np 'processor(s)'
+    decomposePar > log_solve/01_decomposePar
+echo "  --> Done"
+
+echo -e "\nRenumbering mesh"
+    mpirun -np $np renumberMesh -overwrite -latestTime -parallel > log_solve/02_renumberMesh
+echo "  --> Done"
+
+# 3. INIZIALIZZAZIONE
+echo -e "\nSolving potentialFoam"
+    mpirun -np $np potentialFoam -parallel > log_solve/03_potentialFoam
+echo -e "  --> Done"
+
+# 4. LOOP OTTIMIZZAZIONE (Primal + Adjoint + Morphing)
+echo -e "\nSolving adjointOptimisationFoam (Aero AI Loop)"
+    mpirun -np $np adjointOptimisationFoam -parallel > log_solve/04_adjointOpt
+echo -e "  --> Done"
+
+# 5. RICOSTRUZIONE
+echo -e "\nReconstructing mesh and fields"
+    reconstructParMesh -constant > log_solve/05_reconstructParMesh
+    reconstructPar > log_solve/06_reconstructPar
+echo "  --> Done"
+
+# 6. ESTRAZIONE STL — solo patch DP_FW, senza galleria del vento
+# Strategia: surfaceMeshExtract scrive tutte le patch come zone separate
+# in un unico STL, poi surfaceSplitByPatch le divide in file singoli.
+# Usiamo il numero di timestep esatto (non "latestTime" che non viene parsato).
+
+# Ottieni timestep baseline (0) e ottimizzato (ultimo disponibile)
+T_BASE=0
+T_OPT=$(foamListTimes -noFunctionObjects 2>/dev/null | tail -1)
+if [ -z "$T_OPT" ]; then
+    T_OPT=$(ls -d [0-9]*/ 2>/dev/null | sort -n | tail -1 | tr -d '/')
+fi
+echo -e "\nBaseline timestep: $T_BASE"
+echo -e "Optimised timestep: $T_OPT"
+
+echo -e "\nExtracting Baseline STL (t=$T_BASE)..."
+    mkdir -p Export_CAD/baseline_split
+    surfaceMeshExtract -time $T_BASE Export_CAD/baseline_split/full.stl \
+        > log_solve/07_surfaceExport_baseline 2>&1
+    surfaceSplitByPatch Export_CAD/baseline_split/full.stl \
+        >> log_solve/07_surfaceExport_baseline 2>&1
+    # Il file DP_FW si chiamerà full_6.stl (zona 6) oppure full_DP_FW.stl
+    # secondo la versione — cerca entrambi
+    cp Export_CAD/baseline_split/full_DP_FW.stl \
+       Export_CAD/FrontWing_Baseline.stl 2>/dev/null || \
+    cp Export_CAD/baseline_split/full_6.stl \
+       Export_CAD/FrontWing_Baseline.stl 2>/dev/null || \
+    echo "WARNING: file DP_FW baseline non trovato, controlla Export_CAD/baseline_split/"
+echo -e "  --> Baseline Done"
+
+echo -e "\nExtracting Optimised STL (t=$T_OPT)..."
+    mkdir -p Export_CAD/optimised_split
+    surfaceMeshExtract -time $T_OPT Export_CAD/optimised_split/full.stl \
+        > log_solve/08_surfaceExport_optimised 2>&1
+    surfaceSplitByPatch Export_CAD/optimised_split/full.stl \
+        >> log_solve/08_surfaceExport_optimised 2>&1
+    cp Export_CAD/optimised_split/full_DP_FW.stl \
+       Export_CAD/FrontWing_Optimised.stl 2>/dev/null || \
+    cp Export_CAD/optimised_split/full_6.stl \
+       Export_CAD/FrontWing_Optimised.stl 2>/dev/null || \
+    echo "WARNING: file DP_FW ottimizzato non trovato, controlla Export_CAD/optimised_split/"
+echo -e "  --> Optimised Done"
+
+echo -e "\nFile in Export_CAD:"
+    ls -lh Export_CAD/*.stl 2>/dev/null
+
+echo -e "\nZipping processors"
+    mkdir -p allProcessors
+    mv processor* ./allProcessors/
+
+touch ended.txt
+
+echo -e "\nEND OPTIMIZATION AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S)

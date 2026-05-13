@@ -1,0 +1,71 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// SINTASSI CORRETTA per adjointOptimisationFoam v2312.
+// Il morpher gestisce il mesh movement internamente — NON serve
+// dynamicFvMesh né motionSolverLibs.
+//
+// OBBLIGATORIO: un sotto-dizionario con nome dentro
+// volumetricBSplinesMotionSolverCoeffs per ogni morphing box.
+// La sintassi "nDiv/degree/min/max" è non-standard e viene ignorata.
+//
+// Bounds DP_FW (da ParaView/blockMeshDict):
+//   X: [-0.886, -0.303]  Y: [0.000, 0.792]  Z: [0.055, 0.375]
+//   Con margine ~8%:  lower(-0.95 -0.05 0.03)  upper(-0.22 0.87 0.42)
+//
+// Scelta nCPs:
+//   7x7x4 — buon compromesso tra flessibilità e stabilità.
+//   degree 3 richiede MINIMO 4 CPs per direzione → nCPsW=4 è il minimo.
+//   Con confineBoundaryControlPoints true: le 2 fasce di bordo in ogni
+//   direzione sono bloccate, quindi i CPs liberi sono 5x5x2 in pratica.
+//   Se volete più flessibilità aumentate a 9x9x4 o simili.
+
+solver          volumetricBSplinesMotionSolver;
+
+volumetricBSplinesMotionSolverCoeffs
+{
+    FW_box                          // nome del morphing box (arbitrario)
+    {
+        type                cartesian;
+
+        nCPsU               7;      // direzione X (lunghezza frontale)
+        nCPsV               7;      // direzione Y (altezza)
+        nCPsW               4;      // direzione Z (larghezza/depth)
+
+        degreeU             3;
+        degreeV             3;
+        degreeW             3;
+
+        controlPointsDefinition     axisAligned;
+        lowerCpBounds       (-0.95 -0.05  0.03);
+        upperCpBounds       (-0.22  0.87  0.42);
+
+        // Confinamento di movimento
+        // false = i CPs sono liberi di muoversi in quella direzione
+        confineUMovement    false;
+        confineVMovement    false;
+        confineWMovement    false;
+
+        // IMPORTANTE: blocca i CPs sul bordo della box per garantire
+        // continuità C0 tra la regione parametrizzata e il resto della mesh.
+        // Senza questo, i punti di mesh al bordo della box possono
+        // sovrapporsi causando mesh invertita.
+        confineBoundaryControlPoints true;
+    }
+}
+
+// ************************************************************************* //

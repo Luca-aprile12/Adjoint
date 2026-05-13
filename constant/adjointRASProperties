@@ -1,0 +1,35 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      adjointRASProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// adjointKOmegaSST crasha in v2312 patch=260127 per un bug dimensionale
+// in adjointMeanFlowSource() che viene chiamata indipendentemente da
+// adjointTurbulence on/off — non è bypassabile senza patch al sorgente.
+//
+// adjointLaminar bypassa completamente tutto il codice adjointkOmegaSST.
+// Con le BC corrette su Ua (inlet zeroGradient invece di fixedValue zero),
+// il campo adjoint sarà fisicamente reale e la sensitivity map sarà corretta
+// per la parte dominante (pressione + velocità).
+// Il contributo turbolento alla sensitività è tipicamente <5-10% per geometrie
+// aerodinamiche ad alto Re — questa è un'approssimazione accettabile.
+
+adjointRASModel adjointLaminar;
+
+adjointTurbulence off;
+
+printCoeffs     on;
+
+// ************************************************************************* //

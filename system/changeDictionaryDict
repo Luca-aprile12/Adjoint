@@ -1,0 +1,58 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.7.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      changeDictionaryDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// PRESSURE JUMP
+    p                           // field to change
+    {
+    boundaryField{
+		Radiator_Fan_master
+			{
+				type            fan;
+				patchType       cyclic;
+				value           uniform 0;
+				jumpTable       csvFile;
+				jumpTableCoeffs
+				{
+				    nHeaderLine     1;
+				    refColumn       0;
+				    componentColumns 1(1);
+				    separator       ",";
+				    mergeSeparators no;
+				    file            "$FOAM_CASE/constant/fanCurve_radiator";
+				}
+	 		
+	    		}
+	    		
+	    	Battery_Fan_master
+			{
+				type            fan;
+				patchType       cyclic;
+				value           uniform 0;
+				jumpTable       csvFile;
+				jumpTableCoeffs
+				{
+				    nHeaderLine     1;
+				    refColumn       0;
+				    componentColumns 1(1);
+				    separator       ",";
+				    mergeSeparators no;
+				    file            "$FOAM_CASE/constant/fanCurve_battery";
+				}
+	 		
+	    		}
+    }
+}
+// ************************************************************************* //

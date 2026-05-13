@@ -1,0 +1,47 @@
+#!/bin/bash
+
+echo -e "\nSTART AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S) "\n"
+
+
+# ==================== CORES LOADING ===========================
+# load np directly from initialConditions, no need for Processors file
+mock="$(grep 'np' initialConditions | awk '{print $2}')"
+np=${mock:0:${#mock}-1}
+# ================================================================
+
+
+
+
+echo -e "\nPostprocessing:"
+echo "	yPlus"
+	mpirun -np $np simpleFoam -postProcess -func yPlus -latestTime -parallel > log_solve/05_yPlus
+echo "	vorticity"
+	mpirun -np $np postProcess -func vorticity -latestTime -parallel> log_solve/06_vorticity
+echo "	Q"
+	mpirun -np $np postProcess -func Q -latestTime -parallel> log_solve/06_vorticity
+echo "	totalPressureIncompressible"
+	mpirun -np $np postProcess -func "totalPressureIncompressible(p,U)" -latestTime -parallel > log_solve/08_totalPressureIncompressible
+echo "	mag(vorticity)"
+	mpirun -np $np postProcess -func "mag(vorticity)" -latestTime -parallel > log_solve/09_magVorticity
+echo -e "  --> Done";
+
+echo -e "\nReconstructing case";
+	reconstructPar -latestTime > log_solve/10_reconstructPar
+echo "  --> Done";
+
+echo -e "\nReconstructing fields";
+	reconstructPar -withZero -fields '(phi)' -latestTime > log_solve/11_reconstructPar0
+echo "  --> Done";
+
+echo -e "\nZipping processors to free some space";
+
+mkdir allProcessors
+
+mv processor* ./allProcessors
+
+#echo -e "\nfoamToVTK";
+#	foamToVTK -latestTime > log_solve/13_foamToVTK
+#echo "  --> Done";
+touch /home/$USER/OpenFOAM/pietro-v2312/run/ended.txt
+
+echo -e "\nEND AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S)

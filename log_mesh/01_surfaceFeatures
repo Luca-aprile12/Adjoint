@@ -1,0 +1,72 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : surfaceFeatureExtract
+Date   : May 01 2026
+Time   : 21:20:01
+Host   : luca
+PID    : 84167
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+
+Note: Feature line extraction only valid on closed manifold surfaces
+
+Reading surfaceFeatureExtractDict
+
+Surfaces     : FW.obj
+Output       : FW
+Load options : offset
+Write options: writeObj=off writeVTK=off
+
+Statistics:
+Triangles    : 3936886 in 1 region(s)
+Vertices     : 1968431
+Bounding Box : (-0.88555 -0.791853 0.054867) (-0.30285 0.791853 0.37484)
+
+Constructing feature set from included angle 150
+Selecting edges based purely on geometric tests: no
+
+Initial Feature set:
+    points : 23186
+    edges  : 125636
+    of which
+        region edges   : 2
+        external edges : 59825
+        internal edges : 65809
+
+Final Feature set:
+    points : 104482
+    of which
+        convex             : 10996
+        concave            : 862
+        mixed              : 11328
+        non-feature        : 81296
+    edges  : 125636
+    of which
+        external edges     : 87833
+        internal edges     : 37801
+        flat edges         : 0
+        open edges         : 0
+        multiply connected : 2
+
+Writing extendedFeatureEdgeMesh to "/home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj/constant/extendedFeatureEdgeMesh/FW.extendedFeatureEdgeMesh"
+
+Writing featureEdgeMesh to "/home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj/constant/triSurface/FW.eMesh"
+ExecutionTime = 5.22 s  ClockTime = 6 s
+
+End
+

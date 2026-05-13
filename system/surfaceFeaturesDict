@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  8                                     |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      surfaceFeaturesDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "./initialConditions"
+
+surfaces ("Monocoque.obj" "Capes.obj" "FW.obj" "RW.obj" "Undertray.obj" "Diffuser.obj" "RearWheelFin.obj" "FL_Wheel.obj" "FR_Wheel.obj" "RL_Wheel.obj" "RR_Wheel.obj" "MotFL.obj" "MotFR.obj" "MotRL.obj" "MotRR.obj");
+
+// Mark edges whose adjacent surface normals are at an angle less
+// than includedAngle as features
+// - 0  : selects no edges
+// - 180: selects all edges
+includedAngle   		$inclAngle;
+
+subsetFeatures
+{
+        // Keep nonManifold edges (edges with >2 connected faces)
+        nonManifoldEdges       	no;
+
+        // Keep open edges (edges with 1 connected face)
+        openEdges       	yes;
+}
+
+//writeObj                	yes;
+

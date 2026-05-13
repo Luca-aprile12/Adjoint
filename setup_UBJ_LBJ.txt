@@ -1,0 +1,11 @@
+# file con valori di setup macchina
+# NON CAMBIARE LA RIGA IN CUI SI ASSEGNA IL VALORE
+FRH = 20
+RRH = 30
+roll = 0
+yaw = 4
+steer = 0
+UBJ_R = (0.00413 0.542 0.26527)
+LBG_R = (0.00135 0.583528 0.107)
+UBJ_L = (0.00413 -0.542 0.26527)
+LBJ_L = (0.00135 -0.583528 0.107)

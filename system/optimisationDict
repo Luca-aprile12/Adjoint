@@ -1,0 +1,148 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      optimisationDict;
+}
+
+optimisationManager steadyOptimisation;
+
+primalSolvers
+{
+    primal1
+    {
+        active                 true;
+        type                   incompressible;
+        solver                 simple;
+        solutionControls
+        {
+            consistent yes;
+            nIters 1000;
+            residualControl
+            {
+                "p.*"   1e-7;
+                "U.*"   1e-7;
+            }
+            // AGGIUNTO: averaging dei campi primali dal ciclo 500 in poi.
+            // Manuale sez.2.2.1.1.1: alimenta l'adjoint con campi mediati
+            // invece che istantanei quando il primal oscilla vicino alla
+            // convergenza. Migliora la qualità delle sensitivities e
+            // stabilizza la direzione del CG.
+            averaging
+            {
+                average     true;
+                startIter   500;
+            }
+        }
+    }
+}
+
+adjointManagers
+{
+    adjoint1
+    {
+        primalSolver             primal1;
+        adjointSolvers
+        {
+            adjointSolver1
+            {
+                active                 true;
+                type                   incompressible;
+                solver                 adjointSimple;
+
+                objectives
+                {
+                    type            incompressible;
+                    objectiveNames
+                    {
+                        drag_FW
+                        {
+                            weight      1.0;
+                            type        force;
+                            patches     (DP_FW);
+                            direction   (1 0 0);
+                            Aref        1;
+                            rhoInf      1.225;
+                            UInf        16;
+                        }
+                    }
+                }
+
+                ATCModel
+                {
+                    ATCModel          standard;
+                    extraConvection   0;
+                    nSmooth           1;
+                    zeroATCPatchTypes (wall patch);
+                    maskType          pointCells;
+                }
+
+                computeSensitivities   true;
+
+                solutionControls
+                {
+                    consistent yes;
+                    nIters 1000;
+                    residualControl
+                    {
+                        "pa.*"  1e-7;
+                        "Ua.*"  1e-7;
+                    }
+                    // Averaging anche per l'adjoint, come il primal.
+                    averaging
+                    {
+                        average     true;
+                        startIter   500;
+                    }
+                }
+            }
+        }
+    }
+}
+
+optimisation
+{
+    // AGGIUNTO: criteri di convergenza automatica.
+    // La sim si ferma quando il drag cambia meno dello 0.01% tra un ciclo
+    // e il successivo — invece di fare tutti i cicli di endTime.
+    convergence
+    {
+        objective           1.e-4;
+        designVariables     1.e-4;
+    }
+
+    designVariables
+    {
+        type            shape;
+        shapeType       volumetricBSplines;
+        patches         (DP_FW);
+        sensitivityType shapeFI;
+        maxInitChange   1e-3;
+    }
+
+    updateMethod
+    {
+        method          conjugateGradient;
+
+        // Default del manuale: ratio=0.7, minStep=0.3, maxIters=4, c1=1e-4.
+        // ratio=0.7 è più conservativo del nostro 0.5 precedente
+        // (riduce meno aggressivamente → più tentativi prima di accettare).
+        // minStep=0.3 impedisce riduzioni troppo piccole.
+        lineSearch
+        {
+            type        ArmijoConditions;
+            maxIters    4;
+            ratio       0.7;
+            c1          1e-4;
+            minStep     0.3;
+        }
+    }
+}

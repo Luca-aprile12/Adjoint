@@ -1,0 +1,82 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default         steadyState;
+}
+
+gradSchemes
+{
+    default         Gauss linear;
+    grad(U)         cellLimited Gauss linear 1;
+    grad(k)         cellLimited Gauss linear 1;
+    grad(omega)     cellLimited Gauss linear 1;
+
+    // AGGIUNTO: richiesti dal manuale (sez. 5) per la discretizzazione
+    // del termine ATC nelle equazioni adjoint di momento.
+    // cellLimited raccomandato per casi industriali.
+    gradUATC        cellLimited Gauss linear 1;
+    gradUaATC       cellLimited Gauss linear 1;
+}
+
+divSchemes
+{
+    default                 none;
+
+    // Primal
+    div(phi,U)              bounded Gauss linearUpwindV grad(U);
+    div(phi,k)              bounded Gauss upwind;
+    div(phi,omega)          bounded Gauss upwind;
+    div((nuEff*dev2(T(grad(U))))) Gauss linear;
+
+    // Adjoint velocità: wildcard copre sia phi che phiMean (caso averaging)
+    // Manuale sez.5: usare div(-phi,Ua) per il termine di convezione adjoint.
+    // IMPORTANTE: NON usare bounded per l'adjoint eikonal (se attivato),
+    // ma qui gestiamo solo Ua.
+    "div\(-phi.*,Ua.*\)"    bounded Gauss upwind;
+    div(-phi,Ua)            bounded Gauss upwind;
+    div(-phiMean,Ua)        bounded Gauss upwind;
+    div((nuEff*dev(T(grad(Ua))))) Gauss linear;
+
+    // Adjoint turbolenza (per quando adjointTurbulence viene attivato)
+    div(-phi,ka)            bounded Gauss upwind;
+    div(-phi,wa)            bounded Gauss upwind;
+}
+
+laplacianSchemes
+{
+    // Default copre: diffusione adjoint, adjoint mesh movement (ma),
+    // e la PDE di Laplace per shapeFI con Bezier (qui non usato).
+    default         Gauss linear limited 0.333;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         limited 0.333;
+}
+
+wallDist
+{
+    method meshWave;
+}
+
+// ************************************************************************* //

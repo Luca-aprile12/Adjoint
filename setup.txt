@@ -1,0 +1,13 @@
+# file con valori di setup macchina
+# NON CAMBIARE LA RIGA IN CUI SI ASSEGNA IL VALORE
+FRH = 35
+RRH = 35
+roll = 0
+yaw = 0
+steer = 0
+dZ = 0
+AoA = 0
+AttFront = (-0.81734 0 0.15051)
+AttRear = (-0.61358 0 0.12692)
+
+AoA definito positivo per rotazione asse +y

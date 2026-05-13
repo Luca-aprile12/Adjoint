@@ -1,0 +1,64 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : renumberMesh -overwrite -latestTime -parallel
+Date   : May 11 2026
+Time   : 00:13:28
+Host   : luca
+PID    : 19144
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 12
+Hosts  :
+(
+    (luca 12)
+)
+Pstream initialized with:
+    floatTransfer      : false
+    nProcsSimpleSum    : 0
+    nonBlockingExchange: 0 (tuning: 0)
+    exchange algorithm : 0
+    commsType          : nonBlocking
+    polling iterations : 0
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+Mesh region0 size: 4755103
+Before renumbering :
+    band           : 399512
+    profile        : 3.53074e+10
+
+Using default renumberMethod.
+
+Selecting renumberMethod CuthillMcKee
+
+Reading volScalarField: k ka nut nuta omega p pa wa
+Reading volVectorField: U Ua
+Reading pointVectorField: pointDisplacement
+
+Renumbering processor cell decomposition map cellProcAddressing
+Renumbering processor face decomposition map faceProcAddressing
+Renumbering processor point decomposition map pointProcAddressing
+After renumbering :
+    band           : 14558
+    profile        : 3.44437e+10
+
+Writing mesh to "constant"
+Reading hexRef8 data : cellLevel
+Reading hexRef8 data : pointLevel
+Reading hexRef8 data : level0Edge
+End
+
+Finalising parallel run
