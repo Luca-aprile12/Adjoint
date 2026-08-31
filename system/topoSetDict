@@ -1,0 +1,116 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+
+// =============================================================================
+//  topoSetDict — Fase 2 Aero AI
+//
+//  Crea due zone che il solver adjoint riconosce e usa:
+//
+//   1) pointZone "frozenPoints"
+//      Contiene i mesh points sulla superficie di attacchini_guide.stl.
+//      volumetricBSplinesMotionSolver riconosce automaticamente questa
+//      pointZone e blocca il displacement dei suoi punti (=0) durante il
+//      morphing. Effetto: gli attacchini restano fermi anche se la FW si
+//      deforma. Nome FISSO: non rinominare "frozenPoints".
+//
+//   2) cellZone "fw_wake"
+//      Contiene le celle nel box a valle della FW. Usata dall'objective
+//      "powerDissipation" nell'optimisationDict per penalizzare l'energia
+//      dissipata nella scia = incentiva vortici puliti e coerenti.
+//      Il nome "fw_wake" deve corrispondere al cellZones dell'objective
+//      wakeQuality nell'optimisationDict.
+//
+//  PREREQUISITO:
+//    Prima di lanciare 'topoSet -case .', deve esistere:
+//      constant/triSurface/attacchini_guide.obj
+//    (esportato da NX in formato Wavefront ASCII (*.obj), contiene tutte
+//     le superfici degli attacchini che vuoi bloccare: tra i flap, al
+//     monocoque, ecc. Un file unico. Stesso formato di FW.obj.)
+//
+//  ORDINE DI ESECUZIONE:
+//    Va lanciato UNA VOLTA dopo il meshing (runAll) e prima del solver
+//    (runOpt). Vedi runOpt modificato — c'e' una riga 'topoSet' inserita
+//    subito dopo la pulizia e prima del decomposePar.
+// =============================================================================
+
+actions
+(
+    // -------------------------------------------------------------------
+    //  frozenPoints — nodi degli attacchini (non deformabili)
+    // -------------------------------------------------------------------
+    {
+        // Step 1: seleziona i mesh points vicini alla superficie
+        //         attacchini_guide.stl (tolleranza 2 mm)
+        name        attacchini_points;
+        type        pointSet;
+        action      new;
+        source      surfaceToPoint;
+        sourceInfo
+        {
+            file            "constant/triSurface/attacchini_guide.obj";
+            nearDistance    0.002;      // 2 mm di tolleranza spaziale
+            includeInside   true;       // include punti "dentro" volume racchiuso
+            includeOutside  false;      // esclude punti fuori (esterno)
+        }
+    }
+    {
+        // Step 2: converti il pointSet in pointZone. Il nome "frozenPoints"
+        // e' FISSO — il solver lo cerca cosi'. Se lo rinomini, il solver
+        // NON blocca piu' quei punti.
+        name        frozenPoints;
+        type        pointZoneSet;
+        action      new;
+        source      setToPointZone;
+        sourceInfo
+        {
+            set     attacchini_points;
+        }
+    }
+
+    // -------------------------------------------------------------------
+    //  fw_wake — celle nella scia della FW (per powerDissipation)
+    // -------------------------------------------------------------------
+    // Il box e' posizionato:
+    //   - a valle del TE della wing (X > -0.20)
+    //   - dal piano di simmetria alla larghezza dell'endplate + 10 cm
+    //   - dal ground fino a 5 cm sopra il top della wing
+    // NON tocca la wing stessa (X_max wing = -0.30, box X_min = -0.20)
+    // -------------------------------------------------------------------
+    {
+        name        fw_wake_cells;
+        type        cellSet;
+        action      new;
+        source      boxToCell;
+        sourceInfo
+        {
+            box (-0.20  0.0   0.02) (0.30  0.90  0.45);
+        }
+    }
+    {
+        // Nome "fw_wake" deve corrispondere a cellZones nell'objective
+        // wakeQuality del optimisationDict:
+        //   wakeQuality { ... cellZones (fw_wake); }
+        name        fw_wake;
+        type        cellZoneSet;
+        action      new;
+        source      setToCellZone;
+        sourceInfo
+        {
+            set     fw_wake_cells;
+        }
+    }
+);
+
+// ************************************************************************* //

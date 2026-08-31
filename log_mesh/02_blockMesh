@@ -8,10 +8,10 @@
 Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : blockMesh
-Date   : May 01 2026
-Time   : 21:20:07
+Date   : Jul 09 2026
+Time   : 17:38:48
 Host   : luca
-PID    : 84168
+PID    : 5845
 I/O    : uncollated
 Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
 nProcs : 1

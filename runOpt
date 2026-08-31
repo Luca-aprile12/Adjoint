@@ -5,6 +5,7 @@ echo -e "\nSTART OPTIMIZATION AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S) "\n"
 # 1. PULIZIA E SETUP
 echo -e "Cleaning previous stuff"
     rm -fr [0-9]* processor* log_solve postProcessing VTK Export_CAD allProcessors
+    rm -f WATCHDOG_STOP.txt
     cp -r orig0 ./0
     mkdir -p log_solve
     mkdir -p Export_CAD
@@ -14,6 +15,18 @@ echo -e "  --> Done"
 mock="$(grep 'np' initialConditions | awk '{print $2}')"
 np=${mock:0:${#mock}-1}
 # ==============================================================
+
+# 1b. TOPOSET — crea frozenPoints (attacchini rigidi) + fw_wake.
+#     NOTA: fw_wake serve ANCHE se wakeQuality non e' piu' un objective:
+#     il function object wakeMonitor nel controlDict integra nut su
+#     questo cellZone per monitorare la salute della scia.
+echo -e "\nCreating topological zones (frozenPoints + fw_wake)"
+    topoSet -case . > log_solve/00_topoSet 2>&1
+    if grep -q "FATAL\|ERROR" log_solve/00_topoSet; then
+        echo "  --> ERROR nel topoSet, controlla log_solve/00_topoSet"
+        exit 1
+    fi
+    echo "  --> topoSet OK"
 
 # 2. DECOMPOSIZIONE
 echo -e "\nDecomposing case for " $np 'processor(s)'
@@ -29,26 +42,45 @@ echo -e "\nSolving potentialFoam"
     mpirun -np $np potentialFoam -parallel > log_solve/03_potentialFoam
 echo -e "  --> Done"
 
-# 4. LOOP OTTIMIZZAZIONE (Primal + Adjoint + Morphing)
-echo -e "\nSolving adjointOptimisationFoam (Aero AI Loop)"
-    mpirun -np $np adjointOptimisationFoam -parallel > log_solve/04_adjointOpt
-echo -e "  --> Done"
+# 4. LOOP OTTIMIZZAZIONE (Primal + Adjoint + Morphing) + WATCHDOG
+#    Il solver gira in background; il watchdog lo sorveglia e lo ferma
+#    se: merit sale (2 cycle di fila o >2% in un colpo), line search
+#    fallisce 2 cycle di fila, mesh movement > 0.016 m, FOAM FATAL.
+#    In caso di stop trovi il motivo in WATCHDOG_STOP.txt.
+echo -e "\nSolving adjointOptimisationFoam (Aero AI Loop) con watchdog"
+    mpirun -np $np adjointOptimisationFoam -parallel > log_solve/04_adjointOpt &
+    SOLVER_PID=$!
+    python3 scripts/watchdog.py --log log_solve/04_adjointOpt \
+        --pid $SOLVER_PID --case . > log_solve/00_watchdog 2>&1 &
+    WATCHDOG_PID=$!
+    wait $SOLVER_PID
+    SOLVER_RC=$?
+    kill $WATCHDOG_PID 2>/dev/null
+    if [ -f WATCHDOG_STOP.txt ]; then
+        echo ""
+        echo "  *** RUN FERMATO DAL WATCHDOG ***"
+        cat WATCHDOG_STOP.txt
+        echo "  (dettagli in log_solve/00_watchdog)"
+    fi
+echo -e "  --> Done (solver rc=$SOLVER_RC)"
+
+# Ripristina stopAt endTime nel controlDict se il watchdog l'ha cambiato
+if grep -q "stopAt.*writeNow" system/controlDict; then
+    sed -i 's/stopAt\s\+writeNow\s*;/stopAt          endTime;/' system/controlDict
+    echo "  (ripristinato stopAt endTime nel controlDict)"
+fi
 
 # 5. RICOSTRUZIONE
 echo -e "\nReconstructing mesh and fields"
     reconstructParMesh -constant > log_solve/05_reconstructParMesh
+    reconstructParMesh -fullMatch -mergeTol 1e-10 >> log_solve/05_reconstructParMesh 2>&1
     reconstructPar > log_solve/06_reconstructPar
 echo "  --> Done"
 
-# 6. ESTRAZIONE STL — solo patch DP_FW, senza galleria del vento
-# Strategia: surfaceMeshExtract scrive tutte le patch come zone separate
-# in un unico STL, poi surfaceSplitByPatch le divide in file singoli.
-# Usiamo il numero di timestep esatto (non "latestTime" che non viene parsato).
-
-# Ottieni timestep baseline (0) e ottimizzato (ultimo disponibile)
+# 6. ESTRAZIONE STL — solo patch DP_FW
 T_BASE=0
-T_OPT=$(foamListTimes -noFunctionObjects 2>/dev/null | tail -1)
-if [ -z "$T_OPT" ]; then
+T_OPT=$(foamListTimes -noFunctionObjects 2>/dev/null | sort -n | tail -1)
+if [ -z "$T_OPT" ] || [ "$T_OPT" = "0" ]; then
     T_OPT=$(ls -d [0-9]*/ 2>/dev/null | sort -n | tail -1 | tr -d '/')
 fi
 echo -e "\nBaseline timestep: $T_BASE"
@@ -60,13 +92,11 @@ echo -e "\nExtracting Baseline STL (t=$T_BASE)..."
         > log_solve/07_surfaceExport_baseline 2>&1
     surfaceSplitByPatch Export_CAD/baseline_split/full.stl \
         >> log_solve/07_surfaceExport_baseline 2>&1
-    # Il file DP_FW si chiamerà full_6.stl (zona 6) oppure full_DP_FW.stl
-    # secondo la versione — cerca entrambi
     cp Export_CAD/baseline_split/full_DP_FW.stl \
        Export_CAD/FrontWing_Baseline.stl 2>/dev/null || \
     cp Export_CAD/baseline_split/full_6.stl \
        Export_CAD/FrontWing_Baseline.stl 2>/dev/null || \
-    echo "WARNING: file DP_FW baseline non trovato, controlla Export_CAD/baseline_split/"
+    echo "WARNING: file DP_FW baseline non trovato"
 echo -e "  --> Baseline Done"
 
 echo -e "\nExtracting Optimised STL (t=$T_OPT)..."
@@ -79,11 +109,25 @@ echo -e "\nExtracting Optimised STL (t=$T_OPT)..."
        Export_CAD/FrontWing_Optimised.stl 2>/dev/null || \
     cp Export_CAD/optimised_split/full_6.stl \
        Export_CAD/FrontWing_Optimised.stl 2>/dev/null || \
-    echo "WARNING: file DP_FW ottimizzato non trovato, controlla Export_CAD/optimised_split/"
+    echo "WARNING: file DP_FW ottimizzato non trovato"
 echo -e "  --> Optimised Done"
 
 echo -e "\nFile in Export_CAD:"
     ls -lh Export_CAD/*.stl 2>/dev/null
+
+# 7. REPORT WAKE MONITOR
+echo -e "\nWake monitor (integrale di nut su fw_wake):"
+    LATEST_WM=$(ls -t postProcessing/wakeMonitor/*/volFieldValue.dat 2>/dev/null | head -1)
+    if [ -n "$LATEST_WM" ]; then
+        echo "  file: $LATEST_WM"
+        echo "  prime e ultime righe:"
+        grep -v "^#" "$LATEST_WM" | head -3 | sed 's/^/    /'
+        echo "    ..."
+        grep -v "^#" "$LATEST_WM" | tail -3 | sed 's/^/    /'
+    else
+        echo "  (nessun output wakeMonitor trovato - controlla il function"
+        echo "   object nel controlDict e che il cellZone fw_wake esista)"
+    fi
 
 echo -e "\nZipping processors"
     mkdir -p allProcessors

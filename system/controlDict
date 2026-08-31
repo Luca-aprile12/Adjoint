@@ -28,7 +28,7 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         35;
+endTime         12;
 
 deltaT          1;
 
@@ -60,6 +60,19 @@ functions
     // Riabitarle solo per run simpleFoam standalone di post-processing.
     
     #include "functions/residuals"
+    wakeMonitor
+    {
+        type            volFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+        fields          (nut);
+        operation       volIntegrate;
+        regionType      cellZone;
+        name            fw_wake;
+        writeControl    timeStep;
+        writeInterval   50;
+        writeFields     false;
+        log             false;
+    }
     // #include "functions/readFields"
     // #include "functions/forceCoeffs"
     // #include "functions/forces"

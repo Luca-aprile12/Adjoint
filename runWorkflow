@@ -1,0 +1,166 @@
+#!/bin/bash
+# =============================================================================
+# runWorkflow — Orchestratore Phase 1 + Phase 2 per DP_FW_adj.
+#
+# Esegue in sequenza:
+#   1) ./runOpt                              (Phase 1: aggressive CG/PR+)
+#   2) python3 scripts/extract_last_sane.py  (trova T_LAST_GOOD + estrae STL)
+#   3) python3 scripts/prepare_phase2.py     (genera phase2/ con SD + maxInit fisso)
+#   4) cd phase2/ && ./runOpt2               (Phase 2: SD fine-tuning a convergenza)
+#
+# Output finale:  phase2/Export_CAD/FrontWing_Final.stl
+#
+# Posizione attesa: questo script va nella ROOT del case Phase 1
+# (= DP_FW_adj/), accanto a runOpt, runAll, ecc.
+# scripts/extract_last_sane.py e prepare_phase2.py vanno in DP_FW_adj/scripts/.
+#
+# Uso:
+#   chmod +x runWorkflow scripts/*.py
+#   ./runWorkflow
+# =============================================================================
+
+PHASE1_DIR=$(pwd)
+PHASE2_DIR=$PHASE1_DIR/phase2
+SCRIPTS_DIR=$PHASE1_DIR/scripts
+
+# ---------- Sanity check ambiente OpenFOAM ----------
+if ! command -v adjointOptimisationFoam > /dev/null 2>&1; then
+    echo "ERRORE: ambiente OpenFOAM non caricato in questa shell."
+    echo "Carica con: source \$HOME/OpenFOAM/OpenFOAM-v2312/etc/bashrc"
+    exit 1
+fi
+
+# ---------- Sanity check Python ----------
+if ! command -v python3 > /dev/null 2>&1; then
+    echo "ERRORE: python3 non trovato nel PATH."
+    exit 1
+fi
+
+# ---------- Sanity check scripts/ ----------
+for s in extract_last_sane.py prepare_phase2.py; do
+    if [ ! -f "$SCRIPTS_DIR/$s" ]; then
+        echo "ERRORE: manca $SCRIPTS_DIR/$s"
+        echo "Crea la cartella 'scripts/' nel case e mettici i due Python."
+        exit 1
+    fi
+done
+
+# ---------- Sanity check runOpt ----------
+if [ ! -x "$PHASE1_DIR/runOpt" ]; then
+    echo "ERRORE: ./runOpt non trovato o non eseguibile in $PHASE1_DIR"
+    exit 1
+fi
+
+START=$(date +%s)
+
+# =============================================================================
+# Phase 1
+# =============================================================================
+echo ""
+echo "========================================================"
+echo "  PHASE 1  -  aggressive CG / PR+  (starting)"
+echo "  Start:  $(date +%d\ %h\ %Y,\ %H:%M:%S)"
+echo "========================================================"
+echo ""
+
+# runOpt puo' uscire con codice di errore (crash). E' previsto.
+# Cattura l'exit code ma NON interrompiamo il workflow.
+./runOpt
+RC_PHASE1=$?
+
+if [ $RC_PHASE1 -eq 0 ]; then
+    echo ""
+    echo "Phase 1 completata pulita (exit 0)."
+else
+    echo ""
+    echo "Phase 1 terminata con exit $RC_PHASE1 (probabilmente crash post-esplosione)."
+    echo "Procedo con estrazione del cycle sano pre-crash."
+fi
+
+# =============================================================================
+# Estrazione STL del last sane cycle
+# =============================================================================
+echo ""
+echo "========================================================"
+echo "  EXTRACT  -  identifica cycle sano + estrae STL"
+echo "========================================================"
+echo ""
+
+python3 "$SCRIPTS_DIR/extract_last_sane.py" --case "$PHASE1_DIR"
+RC_EXTRACT=$?
+
+if [ $RC_EXTRACT -ne 0 ]; then
+    echo "ERRORE: extract_last_sane.py fallito (exit $RC_EXTRACT)."
+    echo "Probabili cause: log_solve/04_adjointOpt assente, nessun cycle sano,"
+    echo "                 maxInitChange non parsabile da optimisationDict."
+    exit 1
+fi
+
+# =============================================================================
+# Preparazione cartella Phase 2
+# =============================================================================
+echo ""
+echo "========================================================"
+echo "  PREPARE  -  genera phase2/ con SD + maxInit fisso"
+echo "========================================================"
+echo ""
+
+# yes "" pipe per accettare il "y" se phase2/ esiste gia' (sovrascrittura)
+yes "y" 2>/dev/null | python3 "$SCRIPTS_DIR/prepare_phase2.py" \
+    --phase1 "$PHASE1_DIR" --phase2 "$PHASE2_DIR"
+RC_PREPARE=$?
+
+if [ $RC_PREPARE -ne 0 ]; then
+    echo "ERRORE: prepare_phase2.py fallito (exit $RC_PREPARE)."
+    exit 1
+fi
+
+# =============================================================================
+# Phase 2
+# =============================================================================
+echo ""
+echo "========================================================"
+echo "  PHASE 2  -  SD fine-tuning  (starting)"
+echo "  Start:  $(date +%d\ %h\ %Y,\ %H:%M:%S)"
+echo "========================================================"
+echo ""
+
+cd "$PHASE2_DIR"
+./runOpt2
+RC_PHASE2=$?
+
+if [ $RC_PHASE2 -ne 0 ]; then
+    echo ""
+    echo "ATTENZIONE: Phase 2 terminata con exit $RC_PHASE2 (forse crash)."
+    echo "Controlla $PHASE2_DIR/log_solve/04_adjointOpt"
+fi
+
+# =============================================================================
+# Termine
+# =============================================================================
+END=$(date +%s)
+ELAPSED=$((END - START))
+HOURS=$((ELAPSED / 3600))
+MINUTES=$(((ELAPSED % 3600) / 60))
+
+echo ""
+echo "========================================================"
+echo "  WORKFLOW COMPLETE"
+echo "  End:    $(date +%d\ %h\ %Y,\ %H:%M:%S)"
+echo "  Total elapsed: ${HOURS}h ${MINUTES}m"
+echo "========================================================"
+echo ""
+
+FINAL_STL="$PHASE2_DIR/Export_CAD/FrontWing_Final.stl"
+if [ -f "$FINAL_STL" ]; then
+    echo "STL FINALE ottimizzata: $FINAL_STL"
+    echo "Dimensione: $(ls -lh $FINAL_STL | awk '{print $5}')"
+else
+    echo "ATTENZIONE: STL finale NON trovata in $FINAL_STL"
+    echo "Controlla $PHASE2_DIR/Export_CAD/ per eventuali file split."
+fi
+
+# Notifica facoltativa (se Luca ha il sistema ntfy)
+if [ -f "$PHASE1_DIR/config/ntfy/EndSolve/invia_notifica.sh" ]; then
+    bash "$PHASE1_DIR/config/ntfy/EndSolve/invia_notifica.sh"
+fi

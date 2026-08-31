@@ -1,46 +1,109 @@
-# ==========================================
-# 1. OPENFOAM - TIME-STEPS E DATI DI CALCOLO
-# ==========================================
-# Così ignori correttamente tutti i time-step (10, 50, 100, ecc.)
-[1-9]*
-0.*
--*[0-9]*
+# =============================================================================
+#  .gitignore per case OpenFOAM adjoint (FW / half-car)
+#
+#  Filosofia: si versiona TUTTO il setup (dizionari, BC, script, parametri)
+#  e i dati di analisi leggeri (storie degli objective, forze, checkMesh).
+#  Si escludono mesh, geometrie, campi e i log giganti.
+#
+#  ATTENZIONE GitHub: rifiuta i file > 100 MB. Il log 04_adjointOpt arriva
+#  a 100+ MB, quindi e' escluso per forza (regole in fondo).
+# =============================================================================
 
-# ==========================================
-# 2. CALCOLO PARALLELO E LOG
-# ==========================================
-# Ignora le cartelle dei core paralleli
+# -----------------------------------------------------------------------------
+# 1. TIME-STEP E CAMPI DI CALCOLO
+# -----------------------------------------------------------------------------
+# Cartelle time-step numeriche (1, 2, 10, 0.001, ...). Il pattern con lo slash
+# finale colpisce SOLO le cartelle: cosi' non rischia di mangiare file che
+# iniziano per cifra.
+[0-9]*/
+[0-9]*.[0-9]*/
+
+# La cartella '0' generata a ogni run (copia di orig0). orig0 NON e' toccata.
+/0/
+0.orig/
+
+# -----------------------------------------------------------------------------
+# 2. CALCOLO PARALLELO
+# -----------------------------------------------------------------------------
 processor*
+allProcessors/
+allProcessors_mesh/
 
-# LASCIA VISIBILI i log (ottimo per farli analizzare all'AI)
-#*.log
-#log_mesh/
-#log_solve/
-#ended.txt
-
-# ==========================================
-# 3. MESH GENERATA E POST-PROCESSING
-# ==========================================
-# Ignora la mesh tridimensionale calcolata
+# -----------------------------------------------------------------------------
+# 3. MESH E GEOMETRIE
+# -----------------------------------------------------------------------------
 constant/polyMesh/
-
-# Ignora i file di appoggio per caricare i risultati (.foam)
-*.foam
-
-# Ignora tutte le estrazioni geometriche pesanti
+constant/triSurface/
+constant/triSurface_0deg/
+constant/extendedFeatureEdgeMesh/
+Mesh/
 *.obj
-
-# IGNORA i file 3D enormi
+*.stl
+*.eMesh
+*.vtk
+*.vtm
+*.vts
 VTK/
+dynamicCode/
 
-# LASCIA VISIBILI i file di testo di post-processing (es. file delle forze)
-#postProcessing/
+# ECCEZIONE IMPORTANTE: il file 'boundary' elenca tutte le patch con i loro
+# tipi ed e' piccolo. Serve per capire il case senza avere la mesh.
+!constant/polyMesh/boundary
 
-# ==========================================
-# 4. FILE TEMPORANEI E CACHE
-# ==========================================
+# -----------------------------------------------------------------------------
+# 4. OUTPUT DELL'OTTIMIZZAZIONE
+# -----------------------------------------------------------------------------
+# Le storie degli objective (optimisation/objective/) sono PICCOLE e sono la
+# fonte primaria di analisi: si tengono. Il resto (derivate, mappe) e' pesante.
+optimisation/derivatives/
+optimisation/morphingBoxConstraintDerivatives/
+optimisation/controlPoints/
+
+# Export CAD: le STL pesano 100+ MB. Si tengono solo i json di summary.
+Export_CAD/
+!Export_CAD/*.json
+
+# Quarantena dei timestep post-crash
+quarantine_postcrash/
+
+# -----------------------------------------------------------------------------
+# 5. LOG
+# -----------------------------------------------------------------------------
+# I log si tengono (servono per l'analisi) TRANNE i due che esplodono di
+# dimensione e sfondano il limite di GitHub.
+log_solve/04_adjointOpt*
+log_solve/04_simpleFoam*
+log_mesh/05_snappyHexMesh*
+*.log
+
+# -----------------------------------------------------------------------------
+# 6. FILE DI SERVIZIO E TEMPORANEI
+# -----------------------------------------------------------------------------
+*.foam
+ended.txt
+WATCHDOG_STOP.txt
+mock
 *~
 *.swp
+*.bak
+*.bak_*
 core
 __pycache__/
 *.pyc
+.DS_Store
+
+# =============================================================================
+#  RIMANGONO VERSIONATI (verifica con: git status --ignored)
+#    system/            tutti i dizionari (controlDict, fvSchemes, fvSolution,
+#                       snappyHexMeshDict, optimisationDict, decomposeParDict...)
+#    constant/          transportProperties, turbulenceProperties,
+#                       adjointRASProperties, dynamicMeshDict, fvOptions,
+#                       fanCurve_*.txt, polyMesh/boundary
+#    orig0/             tutte le BC (U, p, k, omega, nut, Ua, pa, ...)
+#    scripts/           watchdog.py, extract_last_sane.py, prepare_phase2.py
+#    run*               runWorkflow, runOpt, runValidation, ...
+#    preProcessor.py, initialConditions, setup*.txt, README
+#    optimisation/objective/     storie J per cycle  <-- fondamentali
+#    postProcessing/             forze e coefficienti (file .dat di testo)
+#    log_mesh/06_checkMesh, log_solve/00_watchdog, ecc.
+# =============================================================================

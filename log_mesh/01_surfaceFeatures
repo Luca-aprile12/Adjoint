@@ -8,10 +8,10 @@
 Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : surfaceFeatureExtract
-Date   : May 01 2026
-Time   : 21:20:01
+Date   : Jul 09 2026
+Time   : 17:38:42
 Host   : luca
-PID    : 84167
+PID    : 5841
 I/O    : uncollated
 Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
 nProcs : 1
@@ -66,7 +66,7 @@ Final Feature set:
 Writing extendedFeatureEdgeMesh to "/home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj/constant/extendedFeatureEdgeMesh/FW.extendedFeatureEdgeMesh"
 
 Writing featureEdgeMesh to "/home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj/constant/triSurface/FW.eMesh"
-ExecutionTime = 5.22 s  ClockTime = 6 s
+ExecutionTime = 5.08 s  ClockTime = 5 s
 
 End
 

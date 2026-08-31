@@ -13,6 +13,50 @@ FoamFile
     object      optimisationDict;
 }
 
+// =============================================================================
+//  FASE 2.1 — Pesi calibrati sul baseline + wake declassato a monitor.
+//
+//  CALIBRAZIONE PESI (dal run precedente, 30 cycle):
+//    Valori baseline misurati (cycle 1, campi mediati):
+//      drag_FW      J_base = 0.166
+//      downforce_FW J_base = -1.06
+//      wakeQuality  J_base = 41.2   (powerDissipation, NON adimensionale)
+//
+//    Formula: w_i = alpha_i / |J_base_i|      (NOTA: modulo! la formula del
+//    documento interno usava J senza modulo -> bug di segno sul downforce)
+//
+//      drag:      alpha=1.0  -> w = 1.0/0.166  = 6.0
+//      downforce: alpha=2.5  -> w = 2.5/1.06   = 2.36
+//
+//    Exchange rate implicito: |dCz|/dCd = (alpha_d/alpha_df)*(|Cz_b|/Cd_b)
+//    = (1/2.5)*6.4 = 2.56 -> l'optimizer accetta drag extra solo se compra
+//    almeno 2.56x in downforce. Verificato fisicamente sensato (L/D
+//    marginale di caricare un'ala >> 2.56). La mossa "scarica l'ala"
+//    del run precedente ora PERDE merit.
+//
+//    Merit baseline atteso: 6.0*0.166 + 2.36*(-1.06) = +1.0 - 2.5 = -1.5
+//    e deve scendere (piu' negativo).
+//
+//    REGOLA DI PROCESSO: la calibrazione e' locale al baseline. Se un run
+//    cambia drag o downforce di piu' del 50%, ricalibrare i pesi con i
+//    nuovi valori prima del run successivo.
+//
+//  WAKEQUALITY RIMOSSO dagli objectives:
+//    - il suo gradiente con adjointLaminar (frozen turbulence) e' cieco
+//      alla risposta di nut = meccanismo dominante della dissipazione
+//      -> gradiente sistematicamente sbagliato (causa delle 25 line search
+//      fallite del run da 9 giorni)
+//    - viene MONITORATO senza ottimizzarlo: function object wakeMonitor
+//      nel controlDict calcola integrale di nut sul cellZone fw_wake
+//      (il topoSet in runOpt continua a creare fw_wake — NON rimuoverlo)
+//
+//  CONVERGENZA RILASSATA per run di test:
+//    objective 2e-3 (0.2% relativo) invece di 1e-4. Ferma il run quando
+//    il merit si appiattisce senza sprecare cycle a rifinire.
+//
+//  RICORDA nel controlDict: endTime 12 per questo run di validazione.
+// =============================================================================
+
 optimisationManager steadyOptimisation;
 
 primalSolvers
@@ -28,14 +72,14 @@ primalSolvers
             nIters 1000;
             residualControl
             {
-                "p.*"   1e-7;
-                "U.*"   1e-7;
+                "p.*"   1e-5;
+                "U.*"   1e-5;
+                // OPZIONE VELOCITA': 1e-4 dimezza il tempo per cycle
+                // (esce a ~400-600 iter). Costo: gradienti un po' piu'
+                // rumorosi. Per run di validazione processo e' accettabile.
+                // "p.*"   1e-4;
+                // "U.*"   1e-4;
             }
-            // AGGIUNTO: averaging dei campi primali dal ciclo 500 in poi.
-            // Manuale sez.2.2.1.1.1: alimenta l'adjoint con campi mediati
-            // invece che istantanei quando il primal oscilla vicino alla
-            // convergenza. Migliora la qualità delle sensitivities e
-            // stabilizza la direzione del CG.
             averaging
             {
                 average     true;
@@ -63,9 +107,10 @@ adjointManagers
                     type            incompressible;
                     objectiveNames
                     {
+                        // J1 — drag. Peso calibrato: 1.0/0.166 = 6.0
                         drag_FW
                         {
-                            weight      1.0;
+                            weight      6.0;
                             type        force;
                             patches     (DP_FW);
                             direction   (1 0 0);
@@ -73,6 +118,21 @@ adjointManagers
                             rhoInf      1.225;
                             UInf        16;
                         }
+                        // J2 — downforce. Peso calibrato: 2.5/1.06 = 2.36
+                        // J = Cz < 0; minimizzare con peso positivo spinge
+                        // Cz piu' negativo = piu' downforce. Corretto.
+                        downforce_FW
+                        {
+                            weight      2.36;
+                            type        force;
+                            patches     (DP_FW);
+                            direction   (0 0 1);
+                            Aref        1;
+                            rhoInf      1.225;
+                            UInf        16;
+                        }
+                        // wakeQuality RIMOSSO — vedi header.
+                        // Monitorato via function object nel controlDict.
                     }
                 }
 
@@ -80,7 +140,7 @@ adjointManagers
                 {
                     ATCModel          standard;
                     extraConvection   0;
-                    nSmooth           1;
+                    nSmooth           3;
                     zeroATCPatchTypes (wall patch);
                     maskType          pointCells;
                 }
@@ -93,10 +153,9 @@ adjointManagers
                     nIters 1000;
                     residualControl
                     {
-                        "pa.*"  1e-7;
-                        "Ua.*"  1e-7;
+                        "pa.*"  1e-5;
+                        "Ua.*"  1e-5;
                     }
-                    // Averaging anche per l'adjoint, come il primal.
                     averaging
                     {
                         average     true;
@@ -110,13 +169,12 @@ adjointManagers
 
 optimisation
 {
-    // AGGIUNTO: criteri di convergenza automatica.
-    // La sim si ferma quando il drag cambia meno dello 0.01% tra un ciclo
-    // e il successivo — invece di fare tutti i cicli di endTime.
+    // Rilassato per run di test: si ferma quando il merit cambia di meno
+    // dello 0.2% tra cycle consecutivi (era 1e-4 = 0.01%).
     convergence
     {
-        objective           1.e-4;
-        designVariables     1.e-4;
+        objective           2.e-3;
+        designVariables     1.e-3;
     }
 
     designVariables
@@ -125,24 +183,34 @@ optimisation
         shapeType       volumetricBSplines;
         patches         (DP_FW);
         sensitivityType shapeFI;
-        maxInitChange   1e-3;
+        maxInitChange   8e-3;
     }
 
     updateMethod
     {
         method          conjugateGradient;
 
-        // Default del manuale: ratio=0.7, minStep=0.3, maxIters=4, c1=1e-4.
-        // ratio=0.7 è più conservativo del nostro 0.5 precedente
-        // (riduce meno aggressivamente → più tentativi prima di accettare).
-        // minStep=0.3 impedisce riduzioni troppo piccole.
+        conjugateGradient
+        {
+            betaType    PolakRibiereRestarted;
+        }
+
+        // lineSearch rinforzato (post run 01/08): al cycle 9 il CG ha
+        // proposto uno step 4x piu' grande del normale; con minStep 0.3
+        // il backtracking non poteva scendere sotto il 30% della proposta
+        // -> tutti i 4 tentativi peggioravano -> "Proceeding" ha accettato
+        // il danno (merit -2.10 -> -1.55). Con minStep 0.05 e maxIters 8
+        // il backtracking puo' scendere fino al 5% e trovare uno step in
+        // discesa quasi sempre, invece di accettare il peggioramento.
         lineSearch
         {
             type        ArmijoConditions;
-            maxIters    4;
+            minStep     0.05;
+            maxIters    8;
+            c1          1.e-4;
             ratio       0.7;
-            c1          1e-4;
-            minStep     0.3;
         }
     }
 }
+
+// ************************************************************************* //

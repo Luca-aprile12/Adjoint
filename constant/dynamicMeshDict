@@ -21,18 +21,19 @@ FoamFile
 //
 // OBBLIGATORIO: un sotto-dizionario con nome dentro
 // volumetricBSplinesMotionSolverCoeffs per ogni morphing box.
-// La sintassi "nDiv/degree/min/max" è non-standard e viene ignorata.
 //
-// Bounds DP_FW (da ParaView/blockMeshDict):
-//   X: [-0.886, -0.303]  Y: [0.000, 0.792]  Z: [0.055, 0.375]
-//   Con margine ~8%:  lower(-0.95 -0.05 0.03)  upper(-0.22 0.87 0.42)
+// FASE 2 — Legal box FSAE (aggiornato):
+//   X: [-0.95, -0.22]        (tenuti come Phase 1)
+//   Y: [ 0.00,  0.87]        (Y_min=0 = piano di simmetria)
+//   Z: [ 0.03,  0.50]        <-- MODIFICATO da 0.42 a 0.50
+//                                (30 mm da terra, 500 mm da terra)
 //
 // Scelta nCPs:
-//   7x7x4 — buon compromesso tra flessibilità e stabilità.
-//   degree 3 richiede MINIMO 4 CPs per direzione → nCPsW=4 è il minimo.
-//   Con confineBoundaryControlPoints true: le 2 fasce di bordo in ogni
-//   direzione sono bloccate, quindi i CPs liberi sono 5x5x2 in pratica.
-//   Se volete più flessibilità aumentate a 9x9x4 o simili.
+//   7x7x4 — come Phase 1 (funzionava bene, sensitivita' non troppo rumorosa).
+//   degree 3 richiede MINIMO 4 CPs per direzione → nCPsW=4 e' il minimo.
+//   Con confineBoundaryControlPoints true, i CPs sul bordo del box sono
+//   bloccati automaticamente. Effetto: il piano di simmetria (Y=0 =
+//   V_min della box) e' bloccato senza bisogno di confineVMinCPs esplicito.
 
 solver          volumetricBSplinesMotionSolver;
 
@@ -42,28 +43,26 @@ volumetricBSplinesMotionSolverCoeffs
     {
         type                cartesian;
 
-        nCPsU               7;      // direzione X (lunghezza frontale)
-        nCPsV               7;      // direzione Y (altezza)
-        nCPsW               4;      // direzione Z (larghezza/depth)
+        nCPsU               7;      // direzione X (lunghezza)
+        nCPsV               7;      // direzione Y (semi-span)
+        nCPsW               4;      // direzione Z (altezza)
 
         degreeU             3;
         degreeV             3;
         degreeW             3;
 
         controlPointsDefinition     axisAligned;
-        lowerCpBounds       (-0.95 -0.05  0.03);
-        upperCpBounds       (-0.22  0.87  0.42);
+        lowerCpBounds       (-0.95  0.0   0.03);
+        upperCpBounds       (-0.22  0.87  0.50);   // Z_max: 0.42 -> 0.50
 
-        // Confinamento di movimento
-        // false = i CPs sono liberi di muoversi in quella direzione
+        // Nessun blocco globale di direzione: massima flessibilita' su X/Y/Z
         confineUMovement    false;
         confineVMovement    false;
         confineWMovement    false;
 
-        // IMPORTANTE: blocca i CPs sul bordo della box per garantire
-        // continuità C0 tra la regione parametrizzata e il resto della mesh.
-        // Senza questo, i punti di mesh al bordo della box possono
-        // sovrapporsi causando mesh invertita.
+        // IMPORTANTE: blocca i CPs sul bordo della box per continuita' C0
+        // tra la regione parametrizzata e il resto della mesh. Blocca anche
+        // automaticamente il piano di simmetria a Y=0 (= V_min della box).
         confineBoundaryControlPoints true;
     }
 }

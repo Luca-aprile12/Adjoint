@@ -8,10 +8,10 @@
 Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : patchSummary
-Date   : May 01 2026
-Time   : 21:33:52
+Date   : Jul 09 2026
+Time   : 18:02:37
 Host   : luca
-PID    : 84805
+PID    : 6359
 I/O    : uncollated
 Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
 nProcs : 1
@@ -31,21 +31,27 @@ Reading fields:
     volVectorField (U Ua)
     pointVectorField (pointDisplacement)
 
-group	: symmetryPlane
-    scalar		k		symmetryPlane
-    scalar		ka		symmetryPlane
-    scalar		nSurfaceLayers		symmetryPlane
-    scalar		nut		symmetryPlane
-    scalar		nuta		symmetryPlane
-    scalar		omega		symmetryPlane
-    scalar		p		symmetryPlane
-    scalar		pa		symmetryPlane
-    scalar		thickness		symmetryPlane
-    scalar		thicknessFraction		symmetryPlane
-    scalar		wa		symmetryPlane
-    vector		U		symmetryPlane
-    vector		Ua		symmetryPlane
-    vector		pointDisplacement		symmetryPlane
+--> FOAM Warning : 
+    From void Foam::polyBoundaryMesh::calcGroupIDs() const
+    in file meshes/polyMesh/polyBoundaryMesh/polyBoundaryMesh.C at line 98
+    Removed group 'symmetry' which clashes with patch 1 of the same name.
+symmetry	: side
+symmetry	: symmetry
+symmetry	: top
+    scalar		k		symmetry
+    scalar		ka		symmetry
+    scalar		nSurfaceLayers		symmetry
+    scalar		nut		symmetry
+    scalar		nuta		symmetry
+    scalar		omega		symmetry
+    scalar		p		symmetry
+    scalar		pa		symmetry
+    scalar		thickness		symmetry
+    scalar		thicknessFraction		symmetry
+    scalar		wa		symmetry
+    vector		U		symmetry
+    vector		Ua		symmetry
+    vector		pointDisplacement		symmetry
 
 patch	: inlet
     scalar		k		fixedValue

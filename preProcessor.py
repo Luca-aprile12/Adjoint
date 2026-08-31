@@ -195,7 +195,7 @@ def setupFW():
 	print("Angolo di pitch FW (vero): %.3f gradi (rot asse -y)"%-AoAFWvero)
 	print("VAriazione di altezza FW: %d mm"%regZ)
 	print("Pitching FW")
-	for MS in ["FW"]:
+	for MS in ["FW", "attacchini_guide"]:
 		print("\t"+MS)
 		cmd1 = "surfaceTransformPoints -translate '("+str(-attrear[0])+" 0 "+str(-attrear[2])+")' "+MS+".obj "+MS+".obj > mock"
 		cmd2 = "surfaceTransformPoints -rollPitchYaw '(0 "+str(AoAFWvero)+" 0)' "+MS+".obj "+MS+".obj > mock"
@@ -212,7 +212,7 @@ def setup():
 	print("Angolo di yaw: %.3f gradi"%yaw)
 	print("Angolo di steer: %.3f gradi"%steer)
 	print("Pitching")
-	for MS in ["FW"]:
+	for MS in ["FW", "attacchini_guide"]:
 		print("\t"+MS)
 		cmd1 = "surfaceTransformPoints -translate '(-"+str(xpitch)+" 0 -"+str(zpitchBase)+")' "+MS+".obj "+MS+".obj > mock"
 		cmd2 = "surfaceTransformPoints -rollPitchYaw '(0 "+str(pitch)+" 0)' "+MS+".obj "+MS+".obj > mock"
@@ -222,7 +222,7 @@ def setup():
 		os.system(cmd3)
 	
 	print("Rolling")
-	for MS in ["FW"]:
+	for MS in ["FW", "attacchini_guide"]:
 		print("\t"+MS)
 		cmd1 = "surfaceTransformPoints -rollPitchYaw '("+str(roll)+" 0 0)' "+MS+".obj "+MS+".obj > mock"
 		os.system(cmd1)
@@ -253,7 +253,7 @@ def setup():
 #		os.system(cmd3)
 
 	print("Yawing")
-	for MS in ["FW"]:
+	for MS in ["FW", "attacchini_guide"]:
 		print("\t"+MS)
 		cmd1 = "surfaceTransformPoints -rollPitchYaw '(0 0 "+str(yaw)+")' "+MS+".obj "+MS+".obj > mock"
 		os.system(cmd1)

@@ -8,10 +8,10 @@
 Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : reconstructPar -constant -withZero -fields (cellLevel pointLevel nSurfaceLayers thickness thicknessFraction)
-Date   : May 01 2026
-Time   : 21:33:50
+Date   : Jul 09 2026
+Time   : 18:02:35
 Host   : luca
-PID    : 84804
+PID    : 6358
 I/O    : uncollated
 Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
 nProcs : 1
@@ -43,7 +43,7 @@ No FA fields
 
 Reconstructing sets:
     cellSets 3(addedCells concaveCells underdeterminedCells)
-    faceSets 4(concaveFaces layerFaces lowQualityTetFaces warpedFaces)
+    faceSets 5(concaveFaces edgeFaces layerFaces lowQualityTetFaces warpedFaces)
     pointSets 1(shortEdges)
 Reading hexRef8 data : cellLevel
 Reading hexRef8 data : pointLevel

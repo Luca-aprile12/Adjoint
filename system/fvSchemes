@@ -21,46 +21,70 @@ ddtSchemes
 
 gradSchemes
 {
+    // default catch-all — usato per qualsiasi gradiente non specificato
+    // sotto, incluso grad(UMean), grad(UaMean), grad(pMean), grad(paMean),
+    // grad(nut), ecc. Gauss linear e' safe e di secondo ordine.
     default         Gauss linear;
+
+    // Overrides espliciti per i gradienti dei campi principali dove
+    // cellLimited migliora la stabilita' su mesh industriali.
     grad(U)         cellLimited Gauss linear 1;
     grad(k)         cellLimited Gauss linear 1;
     grad(omega)     cellLimited Gauss linear 1;
 
-    // AGGIUNTO: richiesti dal manuale (sez. 5) per la discretizzazione
-    // del termine ATC nelle equazioni adjoint di momento.
-    // cellLimited raccomandato per casi industriali.
+    // Richiesti dal manuale (sez. 5) per il termine ATC delle equazioni
+    // adjoint di momento.
     gradUATC        cellLimited Gauss linear 1;
     gradUaATC       cellLimited Gauss linear 1;
 }
 
 divSchemes
 {
-    default                 none;
+    // ============================================================
+    //  DEFAULT — catch-all per tutti i div non elencati esplicitamente.
+    //  Copre automaticamente:
+    //   - div((nuEff*twoSymm(grad(U/UMean/Ua/UaMean))))
+    //   - div((nuEff*dev(T(grad(*)))))
+    //   - div(dxdbDir), div(dxdb*)
+    //   - div sulle varianti Mean di termini non-convettivi
+    //   - qualsiasi altro termine viscoso o di grid-sensitivity
+    //  Gauss linear e' centrato di secondo ordine, safe per termini
+    //  diffusivi/di grid sensitivity. NON adatto per convection puro.
+    // ============================================================
+    default                 Gauss linear;
 
-    // Primal
+    // ============================================================
+    //  OVERRIDES espliciti per i termini CONVETTIVI (div(phi,*) e
+    //  div(-phi,*)) che richiedono bounding/upwind per stabilita'.
+    //  Il default Gauss linear qui creerebbe oscillazioni.
+    // ============================================================
+
+    // --- Primal convection (instantaneo) ---
     div(phi,U)              bounded Gauss linearUpwindV grad(U);
     div(phi,k)              bounded Gauss upwind;
     div(phi,omega)          bounded Gauss upwind;
-    div((nuEff*dev2(T(grad(U))))) Gauss linear;
 
-    // Adjoint velocità: wildcard copre sia phi che phiMean (caso averaging)
-    // Manuale sez.5: usare div(-phi,Ua) per il termine di convezione adjoint.
-    // IMPORTANTE: NON usare bounded per l'adjoint eikonal (se attivato),
-    // ma qui gestiamo solo Ua.
+    // --- Primal convection (mediato, per averaging) ---
+    // Wildcard che cattura tutti i div(phi[Mean], [k|omega|U][Mean]).
+    // Sono termini convettivi mediati, che vogliamo bounded+upwind.
+    "div\(phi.*,(U|k|omega).*\)"   bounded Gauss upwind;
+
+    // --- Adjoint convection ---
+    // Wildcard che cattura div(-phi,Ua*) e div(-phiMean,Ua*)
     "div\(-phi.*,Ua.*\)"    bounded Gauss upwind;
     div(-phi,Ua)            bounded Gauss upwind;
     div(-phiMean,Ua)        bounded Gauss upwind;
-    div((nuEff*dev(T(grad(Ua))))) Gauss linear;
 
-    // Adjoint turbolenza (per quando adjointTurbulence viene attivato)
+    // Adjoint turbolenza (usato solo se abiliterete adjointTurbulence;
+    // con adjointLaminar attuale sono ignorati ma non fanno male)
     div(-phi,ka)            bounded Gauss upwind;
     div(-phi,wa)            bounded Gauss upwind;
 }
 
 laplacianSchemes
 {
-    // Default copre: diffusione adjoint, adjoint mesh movement (ma),
-    // e la PDE di Laplace per shapeFI con Bezier (qui non usato).
+    // Default copre TUTTO: laplaciano adjoint, adjoint mesh movement (ma),
+    // PDE del grid sensitivity (m) per shapeFI, laplacian(nuEff, *), ecc.
     default         Gauss linear limited 0.333;
 }
 

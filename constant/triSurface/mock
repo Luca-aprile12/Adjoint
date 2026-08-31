@@ -7,11 +7,11 @@
 \*---------------------------------------------------------------------------*/
 Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
 Arch   : "LSB;label=32;scalar=64"
-Exec   : surfaceTransformPoints -rollPitchYaw (0 0 0.0) FW.obj FW.obj
-Date   : May 01 2026
-Time   : 21:19:51
+Exec   : surfaceTransformPoints -rollPitchYaw (0 0 0.0) attacchini_guide.obj attacchini_guide.obj
+Date   : Jul 09 2026
+Time   : 17:38:23
 Host   : luca
-PID    : 84154
+PID    : 5816
 I/O    : uncollated
 Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj/constant/triSurface
 nProcs : 1
@@ -20,8 +20,8 @@ fileModificationChecking : Monitoring run-time modified files using timeStampMas
 allowSystemOperations : Allowing user-supplied system call operations
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-Reading surf from "FW.obj" ...
-Writing surf to "FW.obj" ...
+Reading surf from "attacchini_guide.obj" ...
+Writing surf to "attacchini_guide.obj" ...
 Rotating points by
     roll  0
     pitch 0

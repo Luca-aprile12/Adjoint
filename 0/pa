@@ -41,11 +41,11 @@ boundaryField
     }
     "(side|top)"
     {
-        type            symmetryPlane;
+        type            symmetry;
     }
     symmetry
     {
-        type            symmetryPlane;
+        type            symmetry;
     }
     DP_FW
     {

@@ -90,7 +90,7 @@ FW_RefLvl        	(5 6);
 FW_feature       	6;
 
 // Layers number
-FW_nLayers          5; // Abbassato da 5 a 3
+FW_nLayers          2; // Abbassato da 5 a 3
 ground_nLayers      3;
 
 // expansion ratios
@@ -100,20 +100,20 @@ expansionRatio_ground           1.3;
 
 // first layer thichkness (m)
 firstLayerThickness	            0.001;
-firstLayerThickness_FW              0.0003;
+firstLayerThickness_FW              0.0005;
 firstLayerThickness_ground          0.25;
 
-relativeSizes false;
+relativeSizes true;
 
 featureAngle	           130;
 slipFeatureAngle            60;
-maxThicknessToMedialRatio  1.2;
+maxThicknessToMedialRatio  0.6;
 minMedialAxisAngle         160;
 maxFaceThicknessRatio        3;
-nSmoothNormals               8;
+nSmoothNormals              15;
 nSmoothSurfaceNormals        8;
 nSmoothThickness            10;
-nRelaxIter                  15;
+nRelaxIter                  25;
 
 // =========== FOR nearWallFields FUNCTION =============
 U_near_d             0.001;

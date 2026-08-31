@@ -8,10 +8,10 @@
 Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
 Arch   : "LSB;label=32;scalar=64"
 Exec   : renumberMesh -overwrite -latestTime -parallel
-Date   : May 11 2026
-Time   : 00:13:28
+Date   : Aug 01 2026
+Time   : 15:52:12
 Host   : luca
-PID    : 19144
+PID    : 54452
 I/O    : uncollated
 Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
 nProcs : 12
@@ -35,10 +35,10 @@ Create time
 
 Create mesh for time = 0
 
-Mesh region0 size: 4755103
+Mesh region0 size: 3939548
 Before renumbering :
-    band           : 399512
-    profile        : 3.53074e+10
+    band           : 330753
+    profile        : 2.81415e+10
 
 Using default renumberMethod.
 
@@ -47,13 +47,15 @@ Selecting renumberMethod CuthillMcKee
 Reading volScalarField: k ka nut nuta omega p pa wa
 Reading volVectorField: U Ua
 Reading pointVectorField: pointDisplacement
+Reading cellSet: fw_wake fw_wake_cells
+Reading pointSet: attacchini_points frozenPoints
 
 Renumbering processor cell decomposition map cellProcAddressing
 Renumbering processor face decomposition map faceProcAddressing
 Renumbering processor point decomposition map pointProcAddressing
 After renumbering :
-    band           : 14558
-    profile        : 3.44437e+10
+    band           : 11066
+    profile        : 2.40502e+10
 
 Writing mesh to "constant"
 Reading hexRef8 data : cellLevel

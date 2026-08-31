@@ -1,0 +1,51 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2312                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9a9aeb73-20260127 OPENFOAM=2312 patch=260127 version=2312
+Arch   : "LSB;label=32;scalar=64"
+Exec   : topoSet -case .
+Date   : Aug 01 2026
+Time   : 15:52:01
+Host   : luca
+PID    : 54442
+I/O    : uncollated
+Case   : /home/luca/OpenFOAM/luca-v2312/run/DP_FW_adj
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create polyMesh for time = 0
+
+Reading topoSetDict
+
+Time = 0
+    mesh not changed.
+Created pointSet attacchini_points
+    Applying source surfaceToPoint
+    Adding points in relation to surface "constant/triSurface/attacchini_guide.obj" ...
+    Read surface from "constant/triSurface/attacchini_guide.obj" in = 0 s
+
+    pointSet attacchini_points now size 29548
+Created pointZoneSet frozenPoints
+    Applying source setToPointZone
+    Adding all points from point set: attacchini_points ...
+    pointZoneSet frozenPoints now size 29548
+Created cellSet fw_wake_cells
+    Applying source boxToCell
+    Adding cells with centre within boxes 1((-0.2 0 0.02) (0.3 0.9 0.45))
+    cellSet fw_wake_cells now size 100122
+Created cellZoneSet fw_wake
+    Applying source setToCellZone
+    Adding all cells from cell set: fw_wake_cells ...
+    cellZoneSet fw_wake now size 100122
+
+End
+
