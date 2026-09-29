@@ -11,8 +11,6 @@ Ottimizzazione di forma sul modello a metà vettura, con
 > **Nota sui coefficienti.** `Aref = 1`, quindi i valori stampati come "C_D" e "C_L" sono in realtà
 > **C_D·A e C_L·A in m², per mezza vettura**.
 
----
-
 ## Struttura
 
 ```
@@ -37,17 +35,14 @@ scripts/watchdog.py  sorveglia il run e lo ferma se qualcosa va storto
 plotConvergence      grafico e CSV della storia di ottimizzazione
 ```
 
----
-
 ## Workflow in breve
-
+```
 | passo | comando | produce |
-|---|---|---|---|
 | 1. mesh (dopo preProcessor)| `./runMesh` | `constant/polyMesh` |
 | 2. ottimizzazione | `./runOpt` | `log/`, `optimisation/`, geometria finale |
 | 3. storia | `./plotConvergence log/04_adjointOpt --out convergenza` | `convergenza.png/.pdf/.svg/.csv` |
 | 4. validazione | `./runValidation --baseline` e `./runValidation` | `validation/` | (non necessario)
 | 5. stint successivo | `./newStint ...` | nuova cartella di case | (eventualmente)
 
----
+```
 
