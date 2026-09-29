@@ -1,0 +1,138 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      Ua;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// =============================================================================
+//  VELOCITA' ADJOINT — half-car
+//
+//  Ogni BC primal ha la sua controparte adjoint (manuale cap. 7). Mappatura
+//  usata qui:
+//
+//    U primal                        ->  Ua adjoint
+//    ------------------------------------------------------------------
+//    inlet   fixedValue              ->  adjointInletVelocity
+//    outlet  inletOutlet             ->  adjointOutletVelocity
+//    ground  translatingWallVelocity ->  adjointWallVelocity
+//    DP_*    fixedValue (0 0 0)      ->  adjointWallVelocity
+//    ruote   rotatingWallVelocity    ->  adjointRotatingWallVelocity
+//    plinth  slip                    ->  slip
+//    side/top symmetryPlane          ->  symmetryPlane  (stesso tipo)
+//    symmetry symmetry               ->  symmetry       (stesso tipo)
+//
+//  NOTA sulle ruote: adjointRotatingWallVelocity aggiunge i contributi alle
+//  sensitivita' dovuti al movimento delle facce di parete (manuale 7.1).
+//  Le entry origin/axis/omega sono le stesse del primal: vengono lette da
+//  initialConditions come nel file U.
+//
+//  NOTA sull'ordine: OpenFOAM risolve prima il nome patch esatto, poi il
+//  gruppo (DP_Group), poi le regex. Quindi le entry esplicite delle ruote
+//  hanno la precedenza su DP_Group anche se le ruote appartengono al gruppo.
+//
+//  NOTA su nut: adjointWallVelocity applica il trattamento adjoint delle
+//  wall function SOLO se su nut c'e' nutUSpaldingWallFunction. Con
+//  nutkWallFunction (attuale) ripiega su un trattamento low-Re, che con
+//  y+ 30-50 e' incoerente. Vedi commento in orig0/nut.
+// =============================================================================
+
+dimensions      [0 1 -1 0 0 0 0];
+
+#include        "../initialConditions";
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    "(side|top)"
+    {
+        type            symmetryPlane;
+    }
+
+    symmetry
+    {
+        type            symmetry;
+    }
+
+    inlet
+    {
+        type            adjointInletVelocity;
+        value           uniform (0 0 0);
+    }
+
+    outlet
+    {
+        type            adjointOutletVelocityFlux;
+        inletValue      uniform (0 0 0);
+        value           uniform (0 0 0);
+    }
+
+    ground
+    {
+        type            adjointWallVelocity;
+        value           uniform (0 0 0);
+    }
+
+    // Tutte le pareti fisse della macchina (monocoque, ali, undertray,
+    // diffusore, sospensioni, upright, condotti...). E' la BC che inietta
+    // il gradiente della funzione obiettivo nel sistema adjoint.
+    DP_Group
+    {
+        type            adjointWallVelocity;
+        value           uniform (0 0 0);
+    }
+
+    DP_FL_Wheel
+    {
+        type            adjointRotatingWallVelocity;
+        origin          $FLCenter;
+        axis            $FLaxis;
+        omega           $FLomega;
+        value           uniform (0 0 0);
+    }
+
+    DP_FR_Wheel
+    {
+        type            adjointRotatingWallVelocity;
+        origin          $FRCenter;
+        axis            $FRaxis;
+        omega           $FRomega;
+        value           uniform (0 0 0);
+    }
+
+    DP_RL_Wheel
+    {
+        type            adjointRotatingWallVelocity;
+        origin          $RLCenter;
+        axis            $RLaxis;
+        omega           $RLomega;
+        value           uniform (0 0 0);
+    }
+
+    DP_RR_Wheel
+    {
+        type            adjointRotatingWallVelocity;
+        origin          $RRCenter;
+        axis            $RRaxis;
+        omega           $RRomega;
+        value           uniform (0 0 0);
+    }
+
+    DP_Tyre_Plinth
+    {
+        type            slip;
+    }
+}
+
+// ************************************************************************* //

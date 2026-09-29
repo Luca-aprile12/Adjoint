@@ -1,0 +1,529 @@
+#!/bin/bash
+# =============================================================================
+# runValidation — misura "pulita" e difendibile della macchina completa.
+#
+# PERCHE' SERVE: i coefficienti stampati durante l'ottimizzazione vengono da
+# un primal a residualControl 1e-5 su una mesh deformata N volte. Sono
+# plausibili, non difendibili. Qui si rigenera la mesh DA ZERO sulla
+# geometria finale e si gira simpleFoam fino a residui stretti.
+#
+# NON tocca il case di partenza: lavora solo in ./validation/
+#
+# USO (dalla cartella del case, dopo ./runOpt):
+#   ./runValidation                 valida la geometria OTTIMIZZATA
+#   ./runValidation --baseline      valida la geometria DI PARTENZA
+#   ./runValidation --fvoptions on  riattiva radiatore/batteria/ventole
+#   ./runValidation --iters 1500    tetto di iterazioni (default 1200)
+#
+# Il confronto corretto e' fra due run di QUESTO script (--baseline e non):
+# stesso metro, stessa mesh, stesse impostazioni. I numeri dell'adjoint non
+# sono confrontabili con quelli del case simpleFoam originale, che gira con
+# fvOptions attive e schemi di gradiente diversi.
+#
+# Tempo: ~1 h di mesh + 3-5 h di simpleFoam.
+# =============================================================================
+
+# =============================================================================
+#  LC_ALL=C — NON TOGLIERE. Il tuo sistema e' in locale italiano, dove il
+#  separatore decimale e' la virgola. awk usa strtod() del locale: leggendo
+#  "9.122700000000e-01" da coefficient.dat si ferma sul punto, che in italiano
+#  non e' un separatore valido, e restituisce 9. Da qui il "Cd = +9,00000"
+#  del run del 6 set 2026 (e CmPitch = -5 da "-5.2583e-02", Cl = -2 da
+#  "-2.65746e+00": tutti i valori tagliati alla mantissa intera).
+#  La virgola nell'output di printf era l'indizio.
+# =============================================================================
+export LC_ALL=C
+
+CASE_DIR=$(pwd)
+VAL=$CASE_DIR/validation
+SRC_TAG="optimised"
+FVOPT="off"
+ITERS=1200
+SKIP_MESH=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --baseline)  SRC_TAG="baseline"; shift ;;
+        --fvoptions) FVOPT="$2"; shift 2 ;;
+        --iters)     ITERS="$2"; shift 2 ;;
+        # Riusa la mesh gia' presente in validation/ e rifa' solo il solve.
+        # Serve quando il solver muore su un errore di dizionario: senza
+        # questo si ributterebbe via un'ora di meshing per una riga sbagliata.
+        --skip-mesh) SKIP_MESH=1; shift ;;
+        *) echo "Uso: ./runValidation [--baseline] [--fvoptions on|off] [--iters N] [--skip-mesh]"; exit 1 ;;
+    esac
+done
+
+echo ""
+echo "=== VALIDATION ($SRC_TAG, fvOptions $FVOPT) — $(date +%d\ %h\ %Y,\ %H:%M:%S) ==="
+echo ""
+
+# ---------- sanity ----------
+command -v simpleFoam > /dev/null 2>&1 || { echo "ERRORE: ambiente OpenFOAM non caricato."; exit 1; }
+for d in system constant orig0; do
+    [ -d "$d" ] || { echo "ERRORE: manca '$d'"; exit 1; }
+done
+
+# ---------- geometrie dei tre componenti deformabili ----------
+# runOpt estrae full.stl e lo splitta per patch: qui peschiamo le tre patch
+# che le morphing box possono deformare. Il monocoque c'e' perche' la box
+# della RW contiene un pezzo dello swan neck.
+SPLIT=Export_CAD/optimised_split
+declare -A GEO=( [DP_FW]=FW.obj [DP_RW]=RW.obj [DP_Monocoque]=Monocoque.obj )
+
+if [ "$SRC_TAG" = "baseline" ]; then
+    # Il baseline non va estratto da nessuna parte: e' la triSurface originale
+    # del case, quella da cui e' partita l'ottimizzazione. Prima lo script
+    # pretendeva un Export_CAD/baseline_split/ che non e' mai esistito.
+    echo "--- geometria: triSurface originale del case (nessuna estrazione) ---"
+    for patch in "${!GEO[@]}"; do
+        f="$CASE_DIR/constant/triSurface/${GEO[$patch]}"
+        [ -f "$f" ] || { echo "ERRORE: manca $f"; exit 1; }
+        printf "  %-16s %s (%s)\n" "$patch" "${GEO[$patch]}" "$(du -h $f | cut -f1)"
+    done
+else
+    echo "--- geometrie da $SPLIT ---"
+    MISSING=0
+    for patch in "${!GEO[@]}"; do
+        f="$SPLIT/full_${patch}.stl"
+        if [ -f "$f" ]; then
+            printf "  %-16s %s (%s)\n" "$patch" "$(basename $f)" "$(du -h $f | cut -f1)"
+        else
+            echo "  $patch -> MANCANTE ($f)"
+            MISSING=1
+        fi
+    done
+    if [ $MISSING -eq 1 ]; then
+        echo ""
+        echo "ERRORE: geometrie mancanti. Lancia prima ./runOpt, che produce"
+        echo "        Export_CAD/optimised_split/ tramite surfaceSplitByPatch."
+        ls Export_CAD/ 2>/dev/null
+        exit 1
+    fi
+fi
+
+# ---------- --skip-mesh: si salva la MESH, il setup si rifa' comunque ----------
+# Il senso del flag e' "ho corretto un dizionario, non rifarmi un'ora di mesh".
+# Nella versione precedente saltava anche il setup: la correzione non arrivava
+# mai dentro validation/ e il solver rimoriva sullo stesso identico FATAL.
+# E' esattamente quello che e' successo il 6 set 2026 (due volte).
+# Ora: mesh messa da parte, case ricostruito da zero, mesh rimessa al suo posto.
+MESH_STASH=""
+if [ $SKIP_MESH -eq 1 ]; then
+    [ -d "$VAL/constant/polyMesh" ] || {
+        echo "ERRORE: --skip-mesh ma $VAL/constant/polyMesh non esiste."; exit 1; }
+    MESH_STASH=$(mktemp -d)
+    echo "--- --skip-mesh: metto da parte la mesh e rigenero il setup ---"
+    mv "$VAL/constant/polyMesh" "$MESH_STASH/"
+    [ -d "$VAL/allProcessors_mesh" ] && mv "$VAL/allProcessors_mesh" "$MESH_STASH/"
+    [ -d "$VAL/log_mesh" ] && mv "$VAL/log_mesh" "$MESH_STASH/"
+fi
+
+# ---------- setup di validation/ ----------
+if [ -d "$VAL" ]; then
+    if [ $SKIP_MESH -eq 0 ]; then
+        read -p "$VAL esiste. Cancellare e rifare? [y/N]: " ans
+        [ "$ans" = "y" ] || [ "$ans" = "Y" ] || { echo "Aborto."; exit 1; }
+    fi
+    rm -rf "$VAL"
+fi
+mkdir -p "$VAL/constant/triSurface"
+
+echo ""
+echo "--- setup validation/ (il case di partenza NON viene toccato) ---"
+
+# system/ senza i dizionari dell'adjoint
+cp -r system "$VAL/"
+rm -f "$VAL/system/optimisationDict" "$VAL/system/topoSetDict"
+
+# constant/ senza mesh, senza le geometrie (le installiamo dopo) e senza i
+# dizionari specifici dell'adjoint
+for item in constant/*; do
+    name=$(basename "$item")
+    case "$name" in
+        polyMesh|triSurface|triSurface_0deg|dynamicMeshDict|adjointRASProperties) ;;
+        *) cp -r "$item" "$VAL/constant/" ;;
+    esac
+done
+
+# orig0/ senza i campi aggiunti
+mkdir -p "$VAL/orig0"
+for f in orig0/*; do
+    case "$(basename $f)" in
+        Ua|pa|nuta|ka|wa|nuaTilda|ma|parametricCoordinates*) ;;
+        *) cp "$f" "$VAL/orig0/" ;;
+    esac
+done
+
+cp initialConditions "$VAL/"
+[ -f runMesh ] && cp runMesh "$VAL/"
+pushd "$VAL" > /dev/null
+
+# ---------- installa le tre geometrie ----------
+if [ "$SRC_TAG" = "baseline" ]; then
+    echo "  copio la triSurface originale (baseline)..."
+    for patch in "${!GEO[@]}"; do
+        cp "$CASE_DIR/constant/triSurface/${GEO[$patch]}" constant/triSurface/
+    done
+else
+echo "  converto le STL in OBJ e ripulisco le direttive o/g..."
+for patch in "${!GEO[@]}"; do
+    surfaceConvert "$CASE_DIR/$SPLIT/full_${patch}.stl" \
+                   "constant/triSurface/${GEO[$patch]}" > /dev/null 2>&1
+done
+fi
+# Senza questa pulizia snappy comporrebbe il nome patch come
+# <geometria>_<regione> (es. DP_FW_DP_FW), rompendo la corrispondenza con le BC.
+python3 - <<'PYEOF'
+import re, glob
+for p in glob.glob("constant/triSurface/*.obj"):
+    c = open(p).read()
+    n = len(re.findall(r"^[og]\s+\S+\s*$", c, flags=re.MULTILINE))
+    c = re.sub(r"^[og]\s+\S+\s*$", "", c, flags=re.MULTILINE)
+    open(p, "w").write(re.sub(r"\n{2,}", "\n", c))
+    print(f"    {p}: {n} direttive rimosse")
+PYEOF
+
+# Le geometrie NON deformabili vengono dal case originale, invariate.
+echo "  copio le geometrie non deformabili dal case..."
+for f in "$CASE_DIR"/constant/triSurface/*; do
+    b=$(basename "$f")
+    [ -f "constant/triSurface/$b" ] || cp "$f" constant/triSurface/
+done
+ls constant/triSurface/ | wc -l | xargs echo "    file in triSurface:"
+
+# ---------- fvOptions ----------
+if [ "$FVOPT" = "on" ]; then
+    sed -i 's/active\s\+false\s*;/active          true;/g' system/fvOptions
+    echo "  fvOptions RIATTIVATE (radiatore, batteria, ventole)"
+else
+    sed -i 's/active\s\+true\s*;/active          false;/g' system/fvOptions
+    grep -c "active" system/fvOptions | xargs echo "  fvOptions disattivate, voci 'active':"
+fi
+
+# ---------- controlDict ----------
+echo "  configuro controlDict (simpleFoam, endTime $ITERS)..."
+CD=system/controlDict
+sed -i 's/application\s\+\w\+\s*;/application     simpleFoam;/'      "$CD"
+sed -i 's/startFrom\s\+\w\+\s*;/startFrom       startTime;/'         "$CD"
+sed -i 's/^\s*startTime\s\+[0-9.eE+-]\+\s*;/startTime       0;/'     "$CD"
+sed -i "s/endTime\s\+[0-9.eE+-]\+\s*;/endTime         $ITERS;/"      "$CD"
+sed -i 's/writeInterval\s\+[0-9.eE+-]\+\s*;/writeInterval   400;/'   "$CD"
+sed -i 's/purgeWrite\s\+[0-9]\+\s*;/purgeWrite      0;/'             "$CD"
+
+# blocco functions ricostruito da zero
+python3 - <<'PYEOF'
+import re
+p = "system/controlDict"
+c = open(p).read()
+m = re.search(r"\nfunctions\s*\{", c)
+if m:
+    i, depth = m.end() - 1, 0
+    while i < len(c):
+        if c[i] == "{": depth += 1
+        elif c[i] == "}":
+            depth -= 1
+            if depth == 0: break
+        i += 1
+    c = c[:m.start()] + c[i+1:]
+open(p, "w").write(c)
+PYEOF
+
+# =============================================================================
+#  PRINCIPIO (dopo due FATAL da dizionario il 6 set 2026, entrambi miei):
+#
+#  Durante il solve gira SOLO cio' che ha bisogno di una storia temporale,
+#  cioe' forze e coefficienti. Tutto il resto (yPlus, wallShearStress,
+#  vorticity, Q, pressione totale) e' roba di post-processing e si calcola
+#  DOPO con -postProcess sull'ultimo timestep, esattamente come fa il vostro
+#  runPostProcess. Quei campi non influenzano la soluzione: farli girare a
+#  ogni iterazione costava tempo e mi ha fatto scrivere function object
+#  inventati (il 'pressure' con mode totalCoeff a cui mancava pInf).
+#  Meno dizionario scritto a mano = meno superficie per sbagliare.
+#
+#  forceCoeffs e' l'unica cosa scritta qui a mano, e per forza: il
+#  functions/forceCoeffs del case dipende da forceCoeffsModified.so, che su
+#  questa macchina non esiste.
+#
+#  NOTA sul CofR: qui e' (0.765 0 0), il punto medio del passo a terra. Con
+#  questo riferimento le colonne Cl(f) e Cl(r) sono DAVVERO i carichi sugli
+#  assi e il ripartitore vale front% = Cl(f)/Cl. Il case originale ha
+#  CR (0 0.765 0), con lo 0.765 nella casella y invece che nella x: non
+#  cambia Cd e Cl, ma rende quelle due colonne prive di significato.
+# =============================================================================
+{
+echo ""
+echo "functions"
+echo "{"
+cat <<'EOF'
+    forces_car
+    {
+        type            forces;
+        libs            ("libforces.so");
+        patches         ("DP_.*");
+        rho             rhoInf;
+        rhoInf          1.225;
+        CofR            (0.765 0 0);
+        writeControl    timeStep;
+        writeInterval   1;
+        log             false;
+    }
+EOF
+# I blocchi forceCoeffs sono identici tranne patches/log, quindi li genero.
+# Scritti per esteso e non con l'espansione $coeffs_car: e' una feature che
+# funziona, ma dopo la settimana appena passata preferisco zero furbizie.
+gen_coeffs () {   # $1 = nome, $2 = patches, $3 = writeControl, $4 = log
+cat <<EOF
+    $1
+    {
+        type            forceCoeffs;
+        libs            ("libforces.so");
+        patches         ( $2 );
+        rho             rhoInf;
+        rhoInf          1.225;
+        magUInf         16;
+        lRef            1.53;
+        Aref            1;
+        CofR            (0.765 0 0);
+        liftDir         (0 0 1);
+        dragDir         (1 0 0);
+        pitchAxis       (0 1 0);
+        writeControl    $3;
+        writeInterval   1;
+        log             $4;
+    }
+EOF
+}
+gen_coeffs coeffs_car       '"DP_.*"'                                        timeStep  true
+gen_coeffs coeffs_FW        '"DP_FW"'                                        writeTime false
+gen_coeffs coeffs_RW        '"DP_RW"'                                        writeTime false
+gen_coeffs coeffs_Undertray '"DP_Undertray"'                                 writeTime false
+gen_coeffs coeffs_Diffuser  '"DP_Diffuser"'                                  writeTime false
+gen_coeffs coeffs_Monocoque '"DP_Monocoque" "DP_Monocoque_duct" "DP_RadiatorDuct"' writeTime false
+gen_coeffs coeffs_Wheels    '"DP_.*_Wheel"'                                  writeTime false
+gen_coeffs coeffs_Susp      '"DP_Susp" "DP_Upright"'                         writeTime false
+echo "}"
+} >> "$CD"
+
+# ---------- fvSolution: residui stretti ----------
+echo "  configuro fvSolution (residualControl 1e-6 su U/p)..."
+python3 - <<'PYEOF'
+import re
+p = "system/fvSolution"
+c = open(p).read()
+block = """SIMPLE
+{
+    nUCorrectors    3;
+    nNonOrthogonalCorrectors 1;
+    pRefCell        0;
+    pRefValue       0;
+    consistent      yes;
+
+    // ATTENZIONE: su questa macchina i residui si fermano su un plateau
+    // ~1e-5 gia' verso l'iterazione 200-300 e non scendono piu' (scia
+    // instabile risolta da un solver stazionario). Quindi 1e-6 NON viene
+    // mai raggiunto e il run arriva sempre a endTime: 1200 iter = ~13 h.
+    // Lo lascio stretto di proposito, cosi' il criterio non scatta per
+    // sbaglio e il risultato e' sempre la media della finestra finale,
+    // che e' la cosa difendibile. Per accorciare usa --iters, non questo.
+    residualControl
+    {
+        p               1e-5;
+        U               1e-5;
+        "(k|omega)"     1e-4;
+    }
+}"""
+m = re.search(r"\bSIMPLE\s*\{", c)
+if m:
+    i, depth = m.end() - 1, 0
+    while i < len(c):
+        if c[i] == "{": depth += 1
+        elif c[i] == "}":
+            depth -= 1
+            if depth == 0: break
+        i += 1
+    c = c[:m.start()] + block + c[i+1:]
+else:
+    c += "\n\n" + block + "\n"
+open(p, "w").write(c)
+PYEOF
+
+# ---------- rimetto la mesh messa da parte ----------
+if [ $SKIP_MESH -eq 1 ]; then
+    mv "$MESH_STASH/polyMesh" constant/
+    [ -d "$MESH_STASH/allProcessors_mesh" ] && mv "$MESH_STASH/allProcessors_mesh" .
+    [ -d "$MESH_STASH/log_mesh" ] && mv "$MESH_STASH/log_mesh" .
+    rmdir "$MESH_STASH" 2>/dev/null
+    echo "  mesh reinstallata (setup rigenerato con le correzioni)"
+fi
+
+# ---------- controllo del dizionario PRIMA di spendere ore ----------
+# simpleFoam -help legge case system/ e constant/: se un function object o
+# uno schema e' malscritto muore qui, in due secondi, invece che dopo la
+# decomposizione. Non copre tutto (i FO vengono costruiti al primo timestep)
+# ma intercetta gli errori di sintassi e le include mancanti.
+echo "  verifico i dizionari..."
+if ! foamDictionary -entry functions system/controlDict > /dev/null 2>&1; then
+    echo ""
+    echo "ERRORE: system/controlDict non e' leggibile. Dettaglio:"
+    foamDictionary -entry functions system/controlDict 2>&1 | tail -20 | sed 's/^/    /'
+    exit 1
+fi
+echo "    controlDict OK ($(foamDictionary -entry functions -keywords system/controlDict 2>/dev/null | tr '\n' ' '))"
+
+popd > /dev/null
+
+cd "$VAL"
+mock=$(grep 'np' initialConditions | awk '{print $2}')
+np=${mock:0:${#mock}-1}
+echo "  cores: $np"
+
+# =====================  MESH FRESCA  =====================
+if [ $SKIP_MESH -eq 0 ]; then
+echo ""
+echo "--- MESH (stessi parametri del case, geometria $SRC_TAG) ---"
+mkdir -p log_mesh
+cp -r orig0 0
+echo "  surfaceFeatureExtract..."; surfaceFeatureExtract > log_mesh/01_features 2>&1
+echo "  blockMesh...";             blockMesh > log_mesh/02_blockMesh 2>&1
+echo "  decomposePar...";          decomposePar -force -latestTime > log_mesh/03_decomposePar 2>&1
+echo "  snappyHexMesh...";         mpirun -np $np snappyHexMesh -overwrite -parallel > log_mesh/05_snappy 2>&1
+echo "  checkMesh...";             mpirun -np $np checkMesh -allTopology -allGeometry -parallel > log_mesh/06_checkMesh 2>&1
+grep -E "Max skewness|Failed|Mesh OK|cells:" log_mesh/06_checkMesh | tail -4 | sed 's/^/      /'
+echo "  reconstructParMesh...";    reconstructParMesh -constant -fullMatch -mergeTol 1e-10 > log_mesh/07_reconstruct 2>&1
+mkdir -p allProcessors_mesh && mv processor* allProcessors_mesh/ 2>/dev/null
+fi
+
+# =====================  SIMPLEFOAM  =====================
+echo ""
+echo "--- SIMPLEFOAM (3-5 h stimate) ---"
+rm -fr [0-9]* processor* log_solve postProcessing VTK
+cp -r orig0 0
+mkdir -p log_solve
+echo "  decomposePar...";   decomposePar > log_solve/01_decomposePar 2>&1
+echo "  renumberMesh...";   mpirun -np $np renumberMesh -overwrite -latestTime -parallel > log_solve/02_renumber 2>&1
+echo "  potentialFoam..."; mpirun -np $np potentialFoam -parallel > log_solve/03_potentialFoam 2>&1
+echo "  simpleFoam...";     mpirun -np $np simpleFoam -parallel > log_solve/04_simpleFoam 2>&1
+
+# ---------- se e' morto, dillo QUI e mostra la riga colpevole ----------
+# Prima lo script proseguiva stampando "iterazioni SIMPLE: 0" e tabelle
+# vuote, e per capire il motivo bisognava andare a pescare il log a mano.
+ITER=$(grep -c "^Time = " log_solve/04_simpleFoam)
+if [ "$ITER" -eq 0 ]; then
+    echo ""
+    echo "=========================================================="
+    echo " SIMPLEFOAM NON HA FATTO NEMMENO UNA ITERAZIONE"
+    echo "=========================================================="
+    if grep -q "FOAM FATAL" log_solve/04_simpleFoam; then
+        echo ""
+        echo "--- errore ---"
+        sed -n '/FOAM FATAL/,/^$/p' log_solve/04_simpleFoam | head -25 | sed 's/^/  /'
+        echo ""
+        FILE=$(grep -oP "file: \S+" log_solve/04_simpleFoam | head -1)
+        [ -n "$FILE" ] && echo "  dizionario colpevole: $FILE"
+        ENTRY=$(grep -oP "Entry '\K[^']+" log_solve/04_simpleFoam | head -1)
+        [ -n "$ENTRY" ] && echo "  entry mancante o errata: '$ENTRY'"
+    else
+        echo ""
+        echo "--- coda del log ---"
+        tail -30 log_solve/04_simpleFoam | sed 's/^/  /'
+    fi
+    echo ""
+    echo "Correggi e rilancia con ./runValidation --skip-mesh (la mesh e'"
+    echo "salva; il setup viene rigenerato, quindi la correzione arriva)."
+    exit 1
+fi
+
+echo "  reconstructPar..."; reconstructPar -latestTime > log_solve/05_reconstructPar 2>&1
+
+# ---------- post-processing, come fa il vostro runPostProcess ----------
+# Questi campi non servono al solve, si calcolano una volta sull'ultimo
+# timestep. -funcs usa le funzioni built-in, non i file del case: nessun
+# dizionario scritto a mano, quindi nessun FATAL possibile.
+echo "  post-processing (yPlus, wallShearStress, vorticity, Q)..."
+mpirun -np $np simpleFoam -postProcess \
+       -funcs "(yPlus wallShearStress vorticity Q)" \
+       -latestTime -parallel > log_solve/06_postProcess 2>&1
+echo "  pressione totale..."
+mpirun -np $np postProcess \
+       -func "totalPressureIncompressible(p,U,rhoInf=1.225)" \
+       -latestTime -parallel > log_solve/07_totalPressure 2>&1
+reconstructPar -latestTime -newTimes > log_solve/08_reconstructPP 2>&1
+
+# =====================  RISULTATI  =====================
+echo ""
+echo "=================== RISULTATO ($SRC_TAG) ==================="
+
+echo "iterazioni SIMPLE: $ITER"
+if grep -q "SIMPLE solution converged" log_solve/04_simpleFoam; then
+    echo "  --> convergenza raggiunta (residualControl soddisfatto)"
+else
+    echo "  --> fermato per endTime. I numeri restano validi se Cd e' stabile"
+    echo "      (vedi lo spread qui sotto)."
+fi
+
+echo ""
+echo "--- y+ sulle pareti (min / max / media per patch) ---"
+# yPlus stampa "patch <nome> y+ : min = ... max = ... average = ..."
+# Con il wall function omegaWallFunction il range sano e' 30 < y+ < 300;
+# sotto 30 la wall function lavora fuori dal suo campo di validita' e i
+# coefficienti smettono di essere difendibili.
+grep "y+ :" log_solve/06_postProcess | sed 's/^/  /' | sort -u | head -40
+echo ""
+grep "y+ :" log_solve/06_postProcess | grep -oP "max = \K[0-9.eE+-]+" | sort -g | tail -1 \
+    | xargs -I{} echo "  y+ massimo su tutta la macchina: {}"
+
+# Finestra di media. Su una macchina completa i residui si assestano su un
+# plateau ~1e-5 e i coefficienti oscillano dentro una banda di circa +-0.8%
+# (scia instabile letta da un solver stazionario): il valore istantaneo
+# dell'ultima iterazione NON e' il risultato, la media di una finestra lunga
+# si'. 100 iterazioni erano meno di un periodo di oscillazione.
+AVG=${AVG:-400}
+
+echo ""
+echo "--- forze in NEWTON (media ultime $AVG iter) ---"
+FD=$(ls -t postProcessing/forces_car/*/force.dat 2>/dev/null | head -1)
+[ -n "$FD" ] && tail -$AVG "$FD" | tr -d '()' | awk '
+    !/^#/ && NF>=7 { fx+=$2+$5; fz+=$4+$7; n++ }
+    END { if(n>0) printf "  Fx (drag)      = %+9.2f N\n  Fz (downforce) = %+9.2f N\n", fx/n, fz/n }'
+
+echo ""
+echo "--- coefficienti macchina intera (media ultime $AVG iter) ---"
+CD_F=$(ls -t postProcessing/coeffs_car/*/coefficient.dat 2>/dev/null | head -1)
+if [ -n "$CD_F" ]; then
+    tail -$AVG "$CD_F" | awk '
+        !/^#/ && NF>=8 { cd+=$2; cd2+=$2*$2; clf+=$6; clr+=$7; cl+=$5; cm+=$8; n++
+                         if(mn==""||$2<mn)mn=$2; if(mx==""||$2>mx)mx=$2 }
+        END { if(n>0){
+            m=cd/n; sd=sqrt(cd2/n-m*m)
+            printf "  Cd      = %+.5f  +- %.5f  (banda %.5f..%.5f, %.2f%%)\n",
+                   m, sd, mn, mx, (mx-mn)/m*100
+            printf "  Cl      = %+.5f\n", cl/n
+            printf "  L/D     = %+.3f\n", -(cl/n)/m
+            printf "  CmPitch = %+.5f\n", cm/n
+            printf "  Cl(f)   = %+.5f     Cl(r) = %+.5f\n", clf/n, clr/n
+            printf "  RIPARTITORE ANTERIORE = %.2f%%\n", (clf/n)/(cl/n)*100
+        } else print "  nessuna riga valida letta: controlla LC_ALL e il formato del file" }'
+else
+    echo "  coefficient.dat non trovato in postProcessing/coeffs_car/"
+fi
+
+echo ""
+echo "--- contributo per componente (ultimo write) ---"
+printf "  %-14s %10s %10s\n" "componente" "Cd" "Cl"
+for c in FW RW Undertray Diffuser Monocoque Wheels Susp; do
+    f=$(ls -t postProcessing/coeffs_$c/*/coefficient.dat 2>/dev/null | head -1)
+    [ -n "$f" ] && tail -1 "$f" | awk -v n="$c" '{printf "  %-14s %10.5f %10.5f\n", n, $2, $5}'
+done
+
+echo ""
+echo "Campi per ParaView nell'ultimo timestep di $VAL:"
+echo "  Q, vorticity            -> strutture vorticose (isosuperficie Q ~ 500-5000)"
+echo "  yPlus, wallShearStress  -> qualita' dello strato limite, separazioni"
+echo "  total(p)                -> perdite di pressione totale, scie"
+echo "Storie temporali complete in $VAL/postProcessing/"
+
+mkdir -p allProcessors && mv processor* allProcessors/ 2>/dev/null
+touch ended.txt
+echo ""
+echo "=== VALIDATION END: $(date +%d\ %h\ %Y,\ %H:%M:%S) ==="

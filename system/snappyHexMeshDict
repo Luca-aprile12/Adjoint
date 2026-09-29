@@ -1,0 +1,971 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2112                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+#include "../initialConditions";
+// Which of the steps to run
+castellatedMesh true;
+snap            true;
+addLayers       true;
+
+
+// Geometry. Definition of all surfaces. All surfaces are of class
+// searchableSurface.
+// Surfaces are used
+// - to specify refinement for any mesh cell intersecting it
+// - to specify refinement for any mesh cell inside/outside/near
+// - to 'snap' the mesh boundary to the surface
+geometry
+{
+    Monocoque.obj
+    {
+        type triSurfaceMesh;
+        name DP_Monocoque;
+    }
+    Monocoque_duct.obj
+    {
+        type triSurfaceMesh;
+        name DP_Monocoque_duct;
+    }
+    Susp.obj
+    {
+        type triSurfaceMesh;
+        name DP_Susp;
+    }
+    Upright.obj
+    {
+        type triSurfaceMesh;
+        name DP_Upright;
+    }
+    /*BrakeDuct_Right.obj
+    {
+        type triSurfaceMesh;
+        name DP_BrakeDuct_Right;
+    }
+    BrakeDuct_Left.obj
+    {
+        type triSurfaceMesh;
+        name DP_BrakeDuct_Left;
+    }*/  
+    Tyre_Plinth_FR.obj
+    {
+        type triSurfaceMesh;
+        name DP_Tyre_Plinth_FR;
+    }
+    Tyre_Plinth_FL.obj
+    {
+        type triSurfaceMesh;
+        name DP_Tyre_Plinth_FL;
+    }
+    Tyre_Plinth_Rear.obj
+    {
+        type triSurfaceMesh;
+        name DP_Tyre_Plinth_Rear;
+    }
+    Undertray.obj
+    {
+        type triSurfaceMesh;
+        name DP_Undertray;
+    }
+    FW.obj
+    {
+        type triSurfaceMesh;
+        name DP_FW;
+    }
+    RW.obj
+    {
+        type triSurfaceMesh;
+        name DP_RW;
+    }
+    
+    
+    Diffuser.obj
+    {
+        type triSurfaceMesh;
+        name DP_Diffuser;
+    }
+
+    FL_Wheel.obj
+    {
+        type triSurfaceMesh;
+        name DP_FL_Wheel;
+    }
+    FR_Wheel.obj
+    {
+        type triSurfaceMesh;
+        name DP_FR_Wheel;
+    }
+    RL_Wheel.obj
+    {
+        type triSurfaceMesh;
+        name DP_RL_Wheel;
+    }
+    RR_Wheel.obj
+    {
+        type triSurfaceMesh;
+        name DP_RR_Wheel;
+    }
+    /*MotFR.obj
+    {
+        type triSurfaceMesh;
+        name DP_MotFR;
+    }
+    MotFL.obj
+    {
+        type triSurfaceMesh;
+        name DP_MotFL;
+    }
+    MotRR.obj
+    {
+        type triSurfaceMesh;
+        name DP_MotRR;
+    }
+    MotRL.obj
+    {
+        type triSurfaceMesh;
+        name DP_MotRL;
+    }*/
+    RadiatorDuct.obj
+    {
+        type triSurfaceMesh;
+        name DP_RadiatorDuct;
+    }
+//POROUS
+    Porous_Battery.obj
+    {
+    	type triSurfaceMesh;
+    	name Porous_Battery;
+    }
+    
+    Porous_Radiator.obj
+    {
+    	type triSurfaceMesh;
+    	name Porous_Radiator;
+    }
+    
+    //========== FAN
+    FanDisk_Radiator.obj
+    {
+    	type triSurfaceMesh;
+    	name FanDisk_Radiator;
+    }
+    FanDiskBattery1.obj
+    {
+    	type triSurfaceMesh;
+    	name FanDiskBattery1;
+    }
+    FanDiskBattery2.obj
+    {
+    	type triSurfaceMesh;
+    	name FanDiskBattery2;
+    }
+    // FanDiskBattery3.obj
+    // {
+    // 	type triSurfaceMesh;
+    // 	name FanDiskBattery3;
+    // }
+    /*PGE_Right.obj
+    {
+    	type triSurfaceMesh;
+    	name PGE_Right;
+    }*/
+
+    refinementBox
+
+    {
+        type searchableBox;
+        min $min1;
+        max $max1;
+    }
+
+    refinementBox2
+    {
+        type searchableBox;
+        min $min2;
+        max $max2;
+    }
+
+    refinementBox3
+    {
+        type searchableBox;
+        min $min3;
+        max $max3;
+    }
+
+    refinementBox4
+    {
+        type searchableBox;
+        min $min4;
+        max $max4;
+    }
+    refinementBox5
+    {
+        type searchableBox;
+        min $min5;
+        max $max5;
+    }
+    refinementBox6
+    {
+        type searchableBox;
+        min $min6;
+        max $max6;
+    }
+
+    
+}
+
+// Settings for the castellatedMesh generation.
+castellatedMeshControls
+{
+
+    // Refinement parameters
+    // ~~~~~~~~~~~~~~~~~~~~~
+
+    // If local number of cells is >= maxLocalCells on any processor
+    // switches from from refinement followed by balancing
+    // (current method) to (weighted) balancing before refinement.
+    maxLocalCells 250000000;
+
+    // Overall cell limit (approximately). Refinement will stop immediately
+    // upon reaching this number so a refinement level might not complete.
+    // Note that this is the number of cells before removing the part which
+    // is not 'visible' from the keepPoint. The final number of cells might
+    // actually be a lot less.
+    maxGlobalCells 250000000;
+
+    // The surface refinement loop might spend lots of iterations refining just a
+    // few cells. This setting will cause refinement to stop if <= minimumRefine
+    // are selected for refinement. Note: it will at least do one iteration
+    // (unless the number of cells to refine is 0)
+    minRefinementCells 0;
+
+    // Allow a certain level of imbalance during refining
+    // (since balancing is quite expensive)
+    // Expressed as fraction of perfect balance (= overall number of cells /
+    // nProcs). 0=balance always.
+    maxLoadUnbalance 0.05;
+
+
+    // Number of buffer layers between different levels.
+    // 1 means normal 2:1 refinement restriction, larger means slower
+    // refinement.
+    nCellsBetweenLevels 4; //3
+
+
+
+    // Explicit feature edge refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    // Specifies a level for any cell intersected by its edges.
+    // This is a featureEdgeMesh, read from constant/triSurface for now.
+    features
+    (
+        {
+            file "Monocoque.eMesh";
+            level $Mono_feature;
+        }
+        {
+            file "Monocoque_duct.eMesh";
+            level $Mono_feature;
+        }
+        {
+            file "Susp.eMesh";
+            level $Susp_feature;
+        }
+        {
+            file "Upright.eMesh";
+            level $Upright_feature;
+        }
+        {
+            file "Tyre_Plinth_FR.eMesh";
+            level $Tyre_Plinth_feature;
+        }
+        {
+            file "Tyre_Plinth_FL.eMesh";
+            level $Tyre_Plinth_feature;
+        }
+        {
+            file "Tyre_Plinth_Rear.eMesh";
+            level $Tyre_Plinth_feature;
+        }
+        {
+            file "Undertray.eMesh";
+            level $UT_feature;
+        }
+        {
+            file "FW.eMesh";
+            level $FW_feature;
+        }
+        {
+            file "RW.eMesh";
+            level $RW_feature;
+        }
+        
+        {
+            file "Diffuser.eMesh";
+            level $UB_feature;
+        }
+        {
+            file "FL_Wheel.eMesh";
+            level $Wheels_feature;
+        }
+        {
+            file "FR_Wheel.eMesh";
+            level $Wheels_feature;
+        }
+        {
+            file "RL_Wheel.eMesh";
+            level $Wheels_feature;
+        }
+        {
+            file "RR_Wheel.eMesh";
+            level $Wheels_feature;
+        }
+        {
+            file "RadiatorDuct.eMesh";
+            level $Mono_feature;
+        }
+
+    );
+
+
+
+    // Surface based refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~~~
+
+    // Specifies two levels for every surface. The first is the minimum level,
+    // every cell intersecting a surface gets refined up to the minimum level.
+    // The second level is the maximum level. Cells that 'see' multiple
+    // intersections where the intersections make an
+    // angle > resolveFeatureAngle get refined up to the maximum level.
+
+    refinementSurfaces
+    {
+        DP_Monocoque{
+            level $Mono_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+        DP_Monocoque_duct{
+            level $Mono_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+        DP_Susp{
+            level $Susp_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+        DP_Upright{
+            level $Upright_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+        
+        DP_Tyre_Plinth_FR{
+            level $Tyre_Plinth_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Tyre_Plinth);
+            }
+        }
+        DP_Tyre_Plinth_FL{
+            level $Tyre_Plinth_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Tyre_Plinth);
+            }
+        }
+        DP_Tyre_Plinth_Rear{
+            level $Tyre_Plinth_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Tyre_Plinth);
+            }
+        }
+        DP_Undertray{
+            level $UT_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+
+        DP_FW{
+            level $FW_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+        DP_RW{
+            level $RW_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+        
+        
+        DP_Diffuser{
+            level $UB_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }
+        }
+        DP_FL_Wheel{
+            level $Wheels_RefLvl;
+            patchInfo{
+                type wall;
+            }
+        }
+        DP_FR_Wheel{
+            level $Wheels_RefLvl;
+            patchInfo{
+                type wall;
+            }
+        }
+        DP_RL_Wheel{
+            level $Wheels_RefLvl;
+            patchInfo{
+                type wall;
+            }
+        }
+        DP_RR_Wheel{
+            level $Wheels_RefLvl;
+            patchInfo{
+                type wall;
+            }
+        }
+        
+        DP_RadiatorDuct{
+            level $Mono_RefLvl;
+            patchInfo{
+                type wall;
+                inGroups (DP_Group);
+            }   
+        }
+        
+        Porous_Battery{
+            level $Porous_RefLvl;
+            faceZone Porous_Battery;
+            cellZone Porous_Battery;
+            cellZoneInside inside;
+        }
+        Porous_Radiator{
+            level $Porous_RefLvl;
+            faceZone Porous_Radiator;
+            cellZone Porous_Radiator;
+            cellZoneInside inside;
+        }
+        FanDisk_Radiator{
+            level $Fan_RefLvl;
+            faceZone FanDisk_Radiator_faceZone;
+            cellZone FanDisk_Radiator;
+            cellZoneInside inside;
+        }
+        FanDiskBattery1{
+            level $Fan_RefLvl;
+            faceZone FanDiskBattery1_faceZone;
+            cellZone FanDiskBattery1;
+            cellZoneInside inside;
+        }
+        FanDiskBattery2{
+            level $Fan_RefLvl;
+            faceZone FanDiskBattery2_faceZone;
+            cellZone FanDiskBattery2;
+            cellZoneInside inside;
+        }
+       
+    }
+    // Resolve sharp angles
+    resolveFeatureAngle $surfaceFeatAng; //30
+
+
+    // Region-wise refinement
+    // ~~~~~~~~~~~~~~~~~~~~~~
+
+    // Specifies refinement level for cells in relation to a surface. One of
+    // three modes
+    // - distance. 'levels' specifies per distance to the surface the
+    //   wanted refinement level. The distances need to be specified in
+    //   descending order.
+    // - inside. 'levels' is only one entry and only the level is used. All
+    //   cells inside the surface get refined up to the level. The surface
+    //   needs to be closed for this to be possible.
+    // - outside. Same but cells outside.
+
+    refinementRegions
+    {
+        // Surface Distance
+    
+    	DP_Monocoque
+        {
+            mode distance;
+            levels (($dist1Mono $ref1Mono));
+        }
+        
+    	DP_Monocoque_duct
+        {
+            mode distance;
+            levels (($dist1_duct $ref1_duct));
+        }
+        
+        DP_Susp
+        {
+            mode distance;
+            levels (($dist1Mono $ref1Mono));
+        }
+        
+        DP_Upright
+        {
+            mode distance;
+            levels (($dist1Mono $ref1Mono));
+        }
+        
+        
+        DP_Tyre_Plinth_FR
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_Tyre_Plinth_FL
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_Tyre_Plinth_Rear
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_Undertray
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_FW
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+         
+        DP_RW
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+       
+        DP_Diffuser
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_FL_Wheel
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_FR_Wheel
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_RL_Wheel
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_RR_Wheel
+        {
+            mode distance;
+            levels (($dist1 $ref1));
+        }
+        
+        DP_RadiatorDuct
+        {
+            mode distance;
+            levels (($dist1_duct $ref1_duct));
+        }
+        
+        refinementBox
+        {
+            mode inside;
+            levels (($lvl1 $lvl1));
+        }
+        
+        refinementBox2
+        {
+            mode inside;
+            levels (($lvl2 $lvl2));
+        }
+        
+        refinementBox3
+        {
+            mode inside;
+            levels (($lvl3 $lvl3));
+        }
+        
+        refinementBox4
+        {
+            mode inside;
+            levels (($lvl4 $lvl4));
+        }
+        
+        refinementBox5
+        {
+            mode inside;
+            levels (($lvl5 $lvl5));
+        }
+        
+        refinementBox6
+        {
+            mode inside;
+            levels (($lvl6 $lvl6));
+        }
+        
+        Porous_Radiator
+        {
+        	mode 		inside;
+        	levels		($Porous_RefLvl);
+        }
+        
+        Porous_Radiator
+        {
+		mode distance;
+		levels (($dist1_duct $ref1_duct));
+        }
+        
+        Porous_Battery
+        {
+        	mode 		inside;
+        	levels		($Porous_RefLvl);
+        }
+        
+        FanDisk_Radiator
+        {
+        	mode 		inside;
+        	levels		($Fan_RefLvl);
+        }
+        
+        FanDisk_Radiator
+        {
+        	mode distance;
+		levels (($dist1_duct $ref1_duct));
+        }
+        
+        FanDiskBattery1
+        {
+        	mode 		inside;
+        	levels		($Fan_RefLvl);
+        }
+        FanDiskBattery2
+        {
+        	mode 		inside;
+        	levels		($Fan_RefLvl);
+        }
+        
+    };
+
+
+    // Mesh selection
+    // ~~~~~~~~~~~~~~
+
+    // After refinement patches get added for all refinementSurfaces and
+    // all cells intersecting the surfaces get put into these patches. The
+    // section reachable from the locationInMesh is kept.
+    // NOTE: This point should never be on a face, always inside a cell, even
+    // after refinement.
+    locationInMesh (10.1 10.1 10.1);
+
+
+    // Whether any faceZones (as specified in the refinementSurfaces)
+    // are only on the boundary of corresponding cellZones or also allow
+    // free-standing zone faces. Not used if there are no faceZones.
+    allowFreeStandingZoneFaces false;
+}
+
+
+// Settings for the snapping.
+snapControls
+{
+    //- Number of patch smoothing iterations before finding correspondence
+    //  to surface
+    nSmoothPatch 3;
+
+    //- Relative distance for points to be attracted by surface feature point
+    //  or edge. True distance is this factor times local
+    //  maximum edge length.
+    tolerance 2.0;
+
+    //- Number of mesh displacement relaxation iterations.
+    nSolveIter 30;
+
+    //- Maximum number of snapping relaxation iterations. Should stop
+    //  before upon reaching a correct mesh.
+    nRelaxIter $nRelaxIter;
+
+    // Feature snapping
+
+    //- Number of feature edge snapping iterations.
+    //  Leave out altogether to disable.
+    nFeatureSnapIter 20;
+
+    //- Detect (geometric only) features by sampling the surface
+    //  (default=false).
+    implicitFeatureSnap false;
+
+    //- Use castellatedMeshControls::features (default = true)
+    explicitFeatureSnap true;
+
+    //- Detect points on multiple surfaces (only for explicitFeatureSnap)
+    multiRegionFeatureSnap false;
+}
+
+
+
+// Settings for the layer addition.
+addLayersControls
+{
+
+
+    // Are the thickness parameters below relative to the undistorted
+    // size of the refined cell outside layer (true) or absolute sizes (false).
+    relativeSizes $relativeSizes;
+
+    // Per final patch (so not geometry!) the layer information
+    layers
+    {
+        DP_Monocoque		{   
+        				nSurfaceLayers $Mono_nLayers;     
+        			   	firstLayerThickness $firstLayerThickness_mono;
+        			   	expansionRatio $expansionRatio_mono;
+        			}
+        DP_Monocoque_duct		{   
+        				nSurfaceLayers 0;     
+        			   
+        			}
+        			
+        DP_Susp		       {   	
+        				nSurfaceLayers $Susp_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_susp;
+        			   	expansionRatio $expansionRatio_susp;        				  
+    				}
+    				
+        DP_Upright            {   	
+        				nSurfaceLayers $Upright_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_mono;
+        			   	expansionRatio $expansionRatio_mono;        				  
+    				}
+    	
+    				
+        DP_Undertray          {   
+                       			nSurfaceLayers $UT_nLayers;
+                        		firstLayerThickness $firstLayerThickness_UT;
+                        		expansionRatio $expansionRatio_UT;    
+                   		 }
+        
+        DP_FW                 {   
+                       			nSurfaceLayers $FW_nLayers;
+                        		firstLayerThickness $firstLayerThickness_FW;
+        			    	expansionRatio $expansionRatio_FW;    
+        			}
+        
+        DP_RW                 {   
+                        		nSurfaceLayers $RW_nLayers; 
+                        		firstLayerThickness_RW $firstLayerThickness_RW;
+                        		expansionRatio $expansionRatio_RW;
+                    		}
+        
+        DP_Diffuser           {   	
+        				nSurfaceLayers $UB_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_diff;
+        			   	expansionRatio $expansionRatio_diff;        				  
+    				}
+    				
+        DP_FL_Wheel           {   	
+        				nSurfaceLayers $Wheels_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_wheels;
+        			   	expansionRatio $expansionRatio_wheels;         				  
+    				}
+    				
+        DP_FR_Wheel           {   	
+        				nSurfaceLayers $Wheels_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_wheels;
+        			   	expansionRatio $expansionRatio_wheels;         				  
+    				}
+    				
+        DP_RL_Wheel           {   	
+        				nSurfaceLayers $Wheels_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_wheels;
+        			   	expansionRatio $expansionRatio_wheels;         				  
+    				}
+    				
+        DP_RR_Wheel           {   	
+        				nSurfaceLayers $Wheels_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_wheels;
+        			   	expansionRatio $expansionRatio_wheels;        				  
+    				}
+    				
+        DP_Tyre_Plinth_FR        {   	
+        				nSurfaceLayers $plinth_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_plinth;
+        			   	expansionRatio $expansionRatio_plinth;        				  
+    				}
+        DP_Tyre_Plinth_FL        {   	
+        				nSurfaceLayers $plinth_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_plinth;
+        			   	expansionRatio $expansionRatio_plinth;        				  
+    				}
+        DP_Tyre_Plinth_Rear        {   	
+        				nSurfaceLayers $plinth_nLayers; 
+        			   	firstLayerThickness $firstLayerThickness_plinth;
+        			   	expansionRatio $expansionRatio_plinth;        				  
+    				}  
+
+        DP_RadiatorDuct		{   
+        				nSurfaceLayers $Mono_nLayers;     
+        			   	firstLayerThickness $firstLayerThickness_mono;
+        			   	expansionRatio $expansionRatio_mono;
+        			}
+        
+        ground                {   	
+        				nSurfaceLayers $ground_nLayers; 
+        				relativeSizes true;
+        			   	firstLayerThickness $firstLayerThickness_ground;
+        			   	expansionRatio $expansionRatio_ground;        				  
+    				}
+    }
+
+    expansionRatio $expansionRatio; //1.2
+    
+    firstLayerThickness $firstLayerThickness;
+
+    // Minimum thickness of cell layer. If for any reason layer
+    // cannot be above minThickness do not add layer.
+    // Relative to undistorted size of cell outside layer.
+    minThickness 0.1e-6;
+
+    // Close to the features and patches where the layers are not grown, the
+    // layer growth can be delayed. Value gives number of layers of cells where
+    // point extrusion is cancelled. With default value 0 points are extruded
+    // directly next to the feature.
+    nGrow 0;
+
+    // Advanced settings
+
+    // When not to extrude the mesh. To extrude, the angle between surfaces must
+    // be smaller then the parameter value.0 is flat surface, 90 is when two
+    // faces are perpendicular.
+    featureAngle $layersFeatureAngle;
+    layerTerminationAngle -180;
+
+    // At non-patched sides allow mesh to slip if extrusion direction makes
+    // angle larger than slipFeatureAngle. The default value is one half of
+    // the featureAngle.
+    slipFeatureAngle $slipFeatureAngle;
+
+    // If there are just a few faces where there are mesh errors (after adding
+    // the layers) print their face centres. This helps in tracking down
+    // problematic mesh areas
+    additionalReporting false;
+
+    // Number of smoothing iterations of surface normals
+    nSmoothSurfaceNormals $nSmoothSurfaceNormals;
+
+    // Number of smoothing iterations of interior mesh movement direction
+    nSmoothNormals $nSmoothNormals;
+
+    // Smooth layer thickness over surface patches
+    nSmoothThickness $nSmoothThickness;
+
+    // Stop layer growth on highly warped cells
+    maxFaceThicknessRatio $maxFaceThicknessRatio;
+
+    // Reduce layer growth where ratio thickness to medial
+    // distance is large
+    maxThicknessToMedialRatio $maxThicknessToMedialRatio;
+
+    // Angle used to pick up medial axis points
+    // Note: changed(corrected) w.r.t 17x! 90 degrees corresponds to 130 in 17x.
+    minMedialAxisAngle $minMedialAxisAngle;
+
+    // Create buffer region for new layer terminations
+    nBufferCellsNoExtrude 0;
+    
+    //- Maximum number of snapping relaxation iterations. Should stop
+    //  before upon reaching a correct mesh.
+    nRelaxIter $nRelaxIter;
+
+
+    // Overall max number of layer addition iterations. The mesher will exit
+    // if it reaches this number of iterations; possibly with an illegal
+    // mesh.
+    nLayerIter 30;
+    
+    // Max number of iterations after which relaxed meshQuality controls
+    // get used. Up to nRelaxedIter it uses the settings in
+    // meshQualityControls,
+    // after nRelaxedIter it uses the values in
+    // meshQualityControls::relaxed.
+    nRelaxedIter 25;
+}
+
+
+
+// Generic mesh quality settings. At any undoable phase these determine
+// where to undo.
+meshQualityControls{
+    #include "meshQualityDict";
+}
+
+/*
+// Advanced
+debug 0;
+debugFlags
+(
+    layerInfo
+);
+*/
+// Write flags
+writeFlags
+(
+    layerSets
+    layerFields     // write volScalarField for layer coverage
+);
+
+
+// Merge tolerance. Is fraction of overall bounding box of initial mesh.
+// Note: the write tolerance needs to be higher than this.
+mergeTolerance 1e-6;
+
+
+// ************************************************************************* //

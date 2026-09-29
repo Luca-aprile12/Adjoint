@@ -1,0 +1,393 @@
+#!/usr/bin/env python3
+"""
+newStint — apre una nuova "gamba" di ottimizzazione su mesh fresca.
+
+METAFORA: la mesh e' un treno di gomme. Si degrada con la deformazione
+cumulata, e quando e' finita non si cambia assetto: si rientra ai box, si
+montano gomme nuove e si riparte con la STESSA macchina. Ogni stint parte
+dalla geometria migliore raggiunta nello stint precedente.
+
+COSA FA
+  1. legge log_solve/04_adjointOpt e trova il cycle col MERIT MIGLIORE fra
+     quelli sani (il best, non l'ultimo: il solver puo' accettare passi
+     peggiorativi)
+  2. mette in quarantena i timestep successivi (spostati, mai cancellati) —
+     serve anche perche' surfaceMeshExtract altrimenti userebbe la mesh del
+     timestep piu' recente
+  3. estrae le superfici dei componenti DEFORMABILI al timestep migliore
+  4. crea la cartella del nuovo stint come copia del case
+  5. sostituisce in constant/triSurface SOLO quei componenti, lasciando
+     intatto tutto il resto della macchina
+  6. NON tocca optimisationDict ne' dynamicMeshDict: stesso vincolo, stesso
+     updateMethod, stesse box, stesso maxInitChange
+
+COSA NON FA, DI PROPOSITO
+  - non passa a steepestDescent (perderebbe il vincolo sul bilanciamento)
+  - non riscrive i bounds delle morphing box (li abbiamo tarati a mano per
+    escludere il naso del monocoque e le ruote)
+  - non copia preProcessor.py ne' triSurface_0deg: la geometria estratta e'
+    GIA' nella posizione post-setup, rilanciare il preProcessor
+    applicherebbe pitch/roll/yaw una seconda volta
+
+USO
+    ./newStint                        # crea lo stint successivo
+    ./newStint --maxinit 4e-3         # e abbassa il passo
+    ./newStint --name stint_prova     # nome cartella esplicito
+    ./newStint --cycle 7              # forza un cycle invece del best
+"""
+
+import argparse
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+# Componenti che le morphing box possono deformare. Il monocoque c'e' perche'
+# la box della RW contiene un pezzo dello swan neck, che appartiene a
+# DP_Monocoque: se non lo riportassimo avanti, la deformazione dello swan
+# neck andrebbe persa a ogni cambio di stint.
+#   patch nella mesh  ->  file in constant/triSurface
+DEFORMABLE = {
+    "DP_FW":        "FW.obj",
+    "DP_RW":        "RW.obj",
+    "DP_Monocoque": "Monocoque.obj",
+}
+
+# Nomi usati per agganciare il log (coerenti con watchdog.py)
+OBJ_SOLVER_NAME = "adjointSolver1"
+
+EXCLUDE = [
+    "processor*", "allProcessors*", "log_solve", "log_mesh", "log_checkMesh*",
+    "polyMesh", "Export_CAD", "optimisation", "Mesh", "quarantine_*",
+    "preProcessor.py", "setup.txt", "setup_UBJ_LBJ.txt", "triSurface_0deg",
+    "ended.txt", "WATCHDOG_STOP.txt", "*.bak", "*.bak_*", "mock",
+    "dynamicCode", "postProcessing", "VTK", "__pycache__",
+]
+
+
+# ============================================================================
+#  Lettura del log
+# ============================================================================
+
+def read_max_init_change(case):
+    p = case / "system" / "optimisationDict"
+    txt = re.sub(r"//.*", "", p.read_text(errors="ignore"))
+    m = re.search(r"\bmaxInitChange\s+([\d.eE+-]+)\s*;", txt)
+    if not m:
+        sys.exit("ERRORE: maxInitChange non trovato in system/optimisationDict")
+    return float(m.group(1))
+
+
+def parse_cycles(log_path):
+    """
+    Per ogni cycle: merit dell'obiettivo, primo mesh movement, peggior
+    'Failed N mesh geometry checks'.
+
+    Convenzione (verificata sui log): il merit stampato nell'intestazione del
+    cycle N e' il valore convergiuto della geometria del timestep N-1. Il
+    cycle 1 gira sulla mesh originale, quindi il suo merit compare
+    nell'intestazione del cycle 2 e corrisponde al timestep 0.
+    """
+    text = log_path.read_text(errors="ignore")
+
+    cycles = {}
+    marks = [(m.start(), int(m.group(1)))
+             for m in re.finditer(r"Optimisation cycle (\d+)", text)]
+    marks.append((len(text), None))
+
+    for i in range(len(marks) - 1):
+        start, num = marks[i]
+        end = marks[i + 1][0]
+        chunk = text[start:end]
+
+        # tutti i merit dell'obiettivo dentro il cycle: il PRIMO e' quello
+        # convergiuto della geometria precedente (timestep num-1), l'ULTIMO
+        # — se diverso — e' quello raggiunto dopo il line search di questo
+        # cycle, cioe' la geometria del timestep num.
+        found = []
+        for blk in re.split(r"Adjoint solver\s+", chunk):
+            if blk.startswith(OBJ_SOLVER_NAME):
+                mm = re.search(r"Weighted objective\s*:\s*([-\d.eE+]+)", blk)
+                if mm:
+                    found.append(float(mm.group(1)))
+
+        mv = re.search(r"Max mesh movement magnitude\s+([\d.eE+-]+)", chunk)
+        failed = [int(f) for f in
+                  re.findall(r"Failed (\d+) mesh geometry checks", chunk)]
+
+        cycles[num] = {
+            "merit": found[0] if found else None,
+            # merit della geometria PRODOTTA da questo cycle (timestep num).
+            # Serve quando il run converge: non esistendo l'intestazione del
+            # cycle successivo, senza questo il best finale andrebbe perso.
+            "merit_after": (found[-1] if len(found) > 1 else None),
+            "movement": float(mv.group(1)) if mv else None,
+            "failed": max(failed) if failed else 0,
+        }
+    return cycles
+
+
+def pick_best(cycles, max_init, move_mult=5.0, max_failed=3):
+    """
+    Timestep da estrarre = quello col merit migliore fra i cycle sani.
+    Un cycle e' insano se ha rotto la mesh (Failed >= 3) o ha prodotto un
+    movimento fuori scala. Il merit del cycle N appartiene al timestep N-1.
+    """
+    move_thr = move_mult * max_init
+    insane_from = None
+    for num in sorted(cycles):
+        c = cycles[num]
+        if c["failed"] >= max_failed or (
+                c["movement"] is not None and c["movement"] > move_thr):
+            insane_from = num
+            break
+
+    # candidati (timestep, merit): l'intestazione del cycle N descrive la
+    # geometria N-1, il valore post-line-search descrive la geometria N.
+    candidates = []
+    for num in sorted(cycles):
+        if insane_from is not None and num >= insane_from:
+            break
+        c = cycles[num]
+        if c["merit"] is not None and num - 1 >= 1:
+            candidates.append((num - 1, c["merit"]))
+        if c["merit_after"] is not None:
+            candidates.append((num, c["merit_after"]))
+
+    if not candidates:
+        return None, None, insane_from
+    best_ts, best_merit = min(candidates, key=lambda t: t[1])
+    return best_ts, best_merit, insane_from
+
+
+# ============================================================================
+#  Quarantena ed estrazione
+# ============================================================================
+
+def quarantine(case, keep_up_to):
+    """Sposta (non cancella) i timestep successivi a keep_up_to."""
+    qroot = case / "quarantine_newStint" / time.strftime("%Y%m%d_%H%M%S")
+    moved = []
+
+    def is_post(p):
+        if not p.is_dir() or not re.fullmatch(r"\d+(\.\d+)?", p.name):
+            return False
+        try:
+            return float(p.name) > keep_up_to
+        except ValueError:
+            return False
+
+    def move(src):
+        dst = qroot / src.relative_to(case)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(src), str(dst))
+        moved.append(str(src.relative_to(case)))
+
+    for p in sorted(case.iterdir()):
+        if is_post(p):
+            move(p)
+    for pattern in ("processor*", "allProcessors/processor*",
+                    "allProcessors_mesh/processor*"):
+        for proc in case.glob(pattern):
+            if proc.is_dir():
+                for p in sorted(proc.iterdir()):
+                    if is_post(p):
+                        move(p)
+    return moved, qroot
+
+
+def extract_surfaces(case, timestep):
+    """surfaceMeshExtract + split; ritorna {patch: Path della STL}."""
+    out = case / "Export_CAD" / f"stint_source_t{timestep}"
+    out.mkdir(parents=True, exist_ok=True)
+    full = out / "full.stl"
+
+    print(f"  surfaceMeshExtract -time {timestep} ...")
+    subprocess.run(["surfaceMeshExtract", "-time", str(timestep), str(full)],
+                   cwd=str(case), check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    print("  surfaceSplitByPatch ...")
+    subprocess.run(["surfaceSplitByPatch", str(full)], cwd=str(case), check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+
+    found = {}
+    for patch in DEFORMABLE:
+        cand = out / f"full_{patch}.stl"
+        if cand.exists():
+            found[patch] = cand
+            print(f"    {patch:16s} -> {cand.name} "
+                  f"({cand.stat().st_size / 1e6:.0f} MB)")
+        else:
+            print(f"    {patch:16s} -> NON TROVATA")
+    return found
+
+
+def install(stl, target_obj, case_new):
+    """Converte in OBJ e ripulisce le direttive o/g."""
+    dst = case_new / "constant" / "triSurface" / target_obj
+    subprocess.run(["surfaceConvert", str(stl), str(dst)], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    # Senza questa pulizia snappy comporrebbe il nome patch come
+    # <geometria>_<regione> (es. DP_FW_DP_FW) rompendo le BC.
+    txt = dst.read_text()
+    n = len(re.findall(r"^[og]\s+\S+\s*$", txt, flags=re.MULTILINE))
+    txt = re.sub(r"^[og]\s+\S+\s*$", "", txt, flags=re.MULTILINE)
+    dst.write_text(re.sub(r"\n{2,}", "\n", txt))
+    return dst, n
+
+
+# ============================================================================
+#  Creazione dello stint
+# ============================================================================
+
+def copy_case(src, dst):
+    import fnmatch
+
+    def skip(name):
+        if re.fullmatch(r"\d+(\.\d+)?", name):
+            return True
+        return any(fnmatch.fnmatch(name, p) for p in EXCLUDE)
+
+    def ignore(d, names):
+        return {n for n in names if skip(n)}
+
+    dst.mkdir(parents=True)
+    for item in src.iterdir():
+        if skip(item.name) or item.name == dst.name:
+            continue
+        if item.is_dir():
+            shutil.copytree(item, dst / item.name, ignore=ignore,
+                            dirs_exist_ok=True)
+        else:
+            shutil.copy2(item, dst / item.name)
+
+
+def next_stint_dir(case):
+    parent, base = case.parent, case.name
+    m = re.match(r"(.*?)[_-]?stint(\d+)$", base)
+    if m:
+        root, n = m.group(1), int(m.group(2))
+    else:
+        root, n = base, 1
+    while True:
+        n += 1
+        cand = parent / f"{root}_stint{n}"
+        if not cand.exists():
+            return cand
+
+
+# ============================================================================
+#  Main
+# ============================================================================
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--case", default=".")
+    ap.add_argument("--log", default="log_solve/04_adjointOpt")
+    ap.add_argument("--name", default=None, help="nome della nuova cartella")
+    ap.add_argument("--cycle", type=int, default=None,
+                    help="forza il timestep da estrarre invece del best")
+    ap.add_argument("--maxinit", default=None,
+                    help="nuovo maxInitChange per lo stint (default: invariato)")
+    args = ap.parse_args()
+
+    case = Path(args.case).resolve()
+    log = case / args.log
+    if not log.exists():
+        sys.exit(f"ERRORE: {log} non trovato")
+
+    max_init = read_max_init_change(case)
+    print("=== newStint ===")
+    print(f"  case in corso : {case}")
+    print(f"  maxInitChange : {max_init:g}")
+
+    cycles = parse_cycles(log)
+    if not cycles:
+        sys.exit("ERRORE: nessun cycle nel log")
+    print(f"  cycle nel log : {len(cycles)}")
+
+    if args.cycle is not None:
+        best_ts, best_merit, insane = args.cycle, cycles.get(args.cycle + 1, {}).get("merit"), None
+        print(f"  timestep FORZATO da riga di comando: {best_ts}")
+    else:
+        best_ts, best_merit, insane = pick_best(cycles, max_init)
+        if best_ts is None:
+            sys.exit("ERRORE: nessun cycle sano con geometria estraibile.\n"
+                     "       Se il run e' morto al primo cycle, non c'e' nulla "
+                     "da portare avanti.")
+        print(f"  best timestep : {best_ts}  (merit {best_merit:.6g})")
+        if insane:
+            print(f"  mesh esaurita : dal cycle {insane}")
+        else:
+            print("  mesh esaurita : no (run fermato per altro motivo)")
+
+    # storia del merit, per capire a colpo d'occhio se lo stint e' valso
+    hist = [(n, c["merit"]) for n, c in sorted(cycles.items())
+            if c["merit"] is not None]
+    if hist:
+        print("  merit         : " +
+              " -> ".join(f"{m:.4f}" for _, m in hist[:8]) +
+              (" ..." if len(hist) > 8 else ""))
+
+    print("\n--- estrazione superfici deformabili ---")
+    moved, qroot = quarantine(case, best_ts)
+    if moved:
+        print(f"  quarantena: {len(moved)} elementi in "
+              f"{qroot.relative_to(case)}")
+    surfaces = extract_surfaces(case, best_ts)
+    missing = set(DEFORMABLE) - set(surfaces)
+    if missing:
+        sys.exit(f"ERRORE: patch non estratte: {', '.join(sorted(missing))}.\n"
+                 f"       Controlla i nomi in DEFORMABLE dentro questo script "
+                 f"contro le patch reali della mesh.")
+
+    new = Path(args.name).resolve() if args.name else next_stint_dir(case)
+    if new.exists():
+        sys.exit(f"ERRORE: {new} esiste gia'")
+    print(f"\n--- nuovo stint: {new.name} ---")
+    print("  copio il case (senza mesh, risultati, preProcessor)...")
+    copy_case(case, new)
+
+    print("  installo le geometrie deformate:")
+    for patch, stl in surfaces.items():
+        dst, n = install(stl, DEFORMABLE[patch], new)
+        print(f"    {patch:16s} -> constant/triSurface/{DEFORMABLE[patch]} "
+              f"({n} direttive o/g rimosse)")
+
+    if args.maxinit:
+        p = new / "system" / "optimisationDict"
+        txt = p.read_text()
+        txt = re.sub(r"(\bmaxInitChange\s+)[\d.eE+-]+(\s*;)",
+                     rf"\g<1>{args.maxinit}\g<2>", txt, count=1)
+        p.write_text(txt)
+        print(f"  maxInitChange: {max_init:g} -> {args.maxinit}")
+    else:
+        print(f"  maxInitChange: invariato ({max_init:g})")
+
+    (new / "README_STINT.txt").write_text(
+        f"Stint generato da newStint il {time.strftime('%Y-%m-%d %H:%M')}\n"
+        f"Origine   : {case}\n"
+        f"Timestep   : {best_ts}   merit {best_merit}\n"
+        f"Geometrie sostituite: {', '.join(DEFORMABLE.values())}\n\n"
+        f"NON lanciare preProcessor.py in questa cartella: le geometrie sono\n"
+        f"gia' nella posizione post-setup (pitch/roll/yaw applicati). Farlo\n"
+        f"applicherebbe le trasformazioni una seconda volta.\n\n"
+        f"Sequenza:  ./runMesh   poi   ./runOpt\n")
+
+    print(f"""
+=== fatto ===
+
+  cd {new.name}
+  ./runMesh          # mesh fresca sulla geometria ottimizzata
+  ./runOpt           # si riparte, stesso vincolo e stesso setup
+
+  NON lanciare preProcessor.py: le geometrie sono gia' post-setup.
+  (promemoria anche in {new.name}/README_STINT.txt)
+""")
+
+
+if __name__ == "__main__":
+    main()

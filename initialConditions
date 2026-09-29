@@ -1,0 +1,210 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  8                                     |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       IOobject;
+    location    "0";
+    object      initialConditions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+np      	      12;
+
+
+//for SIMPLE
+iterations           600; //1000 
+writeStep            300; //250
+
+turbModel            kOmegaSST;
+
+flowVelocity         (16 0 0);
+pressure             0;
+turbulentKE          0.085;
+turbulentOmega       1.78;
+
+
+rho                  1.225;
+lift                 (0 0 1);
+drag                 (1 0 0);
+CR                   (0 0.765 0);	// (1.08 0 0.145)
+pitch                (0 1 0);
+magU                 16;
+wb                   1.53;
+A                    1;
+
+
+FLCenter           (0 -0.6225613 0.1981985);
+FLaxis                 (0 -0.9998476952 0.0174524064);		// camber -1
+FLomega                 80.2342;
+
+FRCenter           (0 0.6225613 0.1981985);
+FRaxis                 (0 0.9998476952 0.0174524064);   
+FRomega                 -80.2342;
+
+RLCenter           (1.53 -0.6225613 0.1981985);
+RLaxis                 (0 -0.9998476952 0.0174524064);       	// camber -1
+RLomega                80.2342;
+
+RRCenter           (1.53 0.6225613 0.1981985);
+RRaxis                 (0 0.9998476952 0.0174524064);
+RRomega                 -80.2342;
+
+
+
+// ============= FOR surfaceFeatureExtract ====================
+
+inclAngle		150; 
+
+// ============= FOR snappyHexMesh ====================
+
+// Distance from car ref.
+dist1 			0.04;
+ref1 			8;
+
+
+// Distance monocoque
+
+dist1Mono		0.04; // ==================== distance 
+ref1Mono		8;
+
+
+// Distance duct
+
+dist1_duct		0.04; // ==================== distance 
+ref1_duct		8;
+
+
+
+// BOX CASE DISTANCE
+
+min1                   (-1.2 0 0); // =============== Scia bassa
+max1                   (2.4 1.1 0.7);
+lvl1                   7; 
+
+min2                   (0.5 0 0); // =============== Scia centrale
+max2                   (2.4 0.75 1.2);
+lvl2                   7; 
+
+min3                  (0 0 0.5); // =============== Scia laterale
+max3                  (2.4 1.10 1);
+lvl3                  7; 
+
+min4                  (-6 0 0); // =============== Box grande
+max4                  (20 3 6);
+lvl4                  1;
+
+min5                  (2.4 0 0); // =============== Wake RW
+max5                  (5 1.8 1.8);
+lvl5                  5;
+
+min6              	(1.5 0 0.5); // ================= Box RW
+max6                	(2.4 1.1 1.5);
+lvl6                	7;
+
+
+
+// Refinmente levels
+// Set to the same level (i.e (8 8)) 
+
+Mono_RefLvl     	 (8 8);
+Mono_feature       		8; // max(RefLvl)
+
+Susp_RefLvl      	(8 8);
+Susp_feature       		8; // max(RefLvl)
+
+Upright_RefLvl     	(8 8);
+Upright_feature       		8; // max(RefLvl)
+
+UT_RefLvl        	(8 8);
+UT_feature       		8; // max(RefLvl)
+
+UB_RefLvl       	(8 8);
+UB_feature       		8; // max(RefLvl)
+
+FW_RefLvl        	(9 9);
+FW_feature       		9; // max(RefLvl)
+
+RW_RefLvl        	(8 8);
+RW_feature      		8; // max(RefLvl)
+
+Wheels_RefLvl    	(8 8);
+Wheels_feature       		8; // max(RefLvl)
+
+Tyre_Plinth_RefLvl    	(11 11);
+Tyre_Plinth_feature       	11; // max(RefLvl)
+
+Fan_RefLvl    		(8 8);
+Fan_feature	      		8; // max(RefLvl)
+
+Porous_RefLvl    	(8 8);
+Porous_feature	      		8; // max(RefLvl)
+
+
+surfaceFeatAng		    30; //Questo è quello usato dai surface refinement	
+layersFeatureAngle	   150; //Questo è usato dai layer
+slipFeatureAngle            75; //90
+maxThicknessToMedialRatio  1.2; 
+minMedialAxisAngle         160;
+maxFaceThicknessRatio        3;
+nSmoothNormals               8;
+nSmoothSurfaceNormals        8;
+nSmoothThickness            10;
+nRelaxIter                  10; //Not Used 
+
+
+// Layers number
+
+Mono_nLayers        4;
+Susp_nLayers        3;
+Upright_nLayers     3;
+UT_nLayers          4;
+UB_nLayers          5;
+FW_nLayers          5;
+RW_nLayers          5;
+ground_nLayers      3;
+Wheels_nLayers      4;
+plinth_nLayers      4;
+
+// expansion ratios
+
+expansionRatio                  1.1;
+expansionRatio_FW               1.1;	//1.2
+expansionRatio_mono             1.3;	//1.2
+expansionRatio_wheels           1.3;
+expansionRatio_ground           1.3;
+expansionRatio_plinth           1.1;
+expansionRatio_susp             1.1;
+expansionRatio_UT               1.2;
+expansionRatio_RW               1.2;
+expansionRatio_diff             1.2;
+
+// first layer thichkness (m)
+firstLayerThickness	            0.001; 
+firstLayerThickness_mono	    0.001;
+firstLayerThickness_wheels	    0.0006;
+firstLayerThickness_plinth	    0.0006;
+firstLayerThickness_susp       	    0.001;
+firstLayerThickness_UT              0.001;
+firstLayerThickness_FW              0.001;
+firstLayerThickness_RW              0.0008;
+firstLayerThickness_diff            0.001;
+firstLayerThickness_ground          0.25;
+
+
+relativeSizes false;
+
+
+
+// =========== FOR nearWallFields FUNCTION =============
+U_near_d             0.001;
+
+// =========== FOR isoSurfaces FUNCTION =============
+Q_isoSurface	10000;

@@ -1,0 +1,165 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  4.1                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      fvOptions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Radiator
+{
+    type            explicitPorositySource;
+    active          false;
+
+	explicitPorositySourceCoeffs
+    {   
+       selectionMode   cellZone; 
+       type            DarcyForchheimer;
+       cellZone        Porous_Radiator;
+
+       DarcyForchheimerCoeffs
+       {
+           d   d [0 -2 0 0 0 0 0] (9805062 10000000 10000000);
+           f   f [0 -1 0 0 0 0 0] (102 1000 1000);
+           //d   (9805062 0 0);
+           //f   (102 0 0);
+
+           coordinateSystem
+              {
+                 type    cartesian;
+                 origin  (0 0 0);
+                 rotation
+                 {
+                    type    axes;
+                    e1      (0.9975641 0 0.0697565); 
+                    e2      (0 1 0);
+                 }
+              }
+       }
+    }
+}
+Battery
+{
+    type            explicitPorositySource;
+    active          false;
+
+    explicitPorositySourceCoeffs
+    {   
+       selectionMode   cellZone; 
+       type            DarcyForchheimer;
+       cellZone        Porous_Battery;
+
+       DarcyForchheimerCoeffs
+       {
+           d   d [0 -2 0 0 0 0 0] (-33262 100000 100000);
+           f   f [0 -1 0 0 0 0 0] (14.4844 100000 100000);
+           //d   (15391 0 0);
+           //f   (182 0 0);
+
+           coordinateSystem
+              {
+                 type    cartesian;
+                 origin  (0 0 0);
+                 rotation
+                 {
+                    type    axes;
+                    e1      (0.996567 0 0.082791); 
+                    e2      (0 1 0);
+                 }
+              }
+       }
+    }
+}
+
+Battery_fan1
+    {
+        // Mandatory entries
+        type                fanMomentumSource;
+        active              false;
+        fanCurve
+	    {
+		type		table;
+		//value 		500;
+		//type	polynomial;
+		//value	1;
+		//coeffs 	(100 0);
+		file            "$FOAM_CASE/constant/fanCurve_battery.txt";
+	    }
+	flowDir             (0.996567 0 0.082791);
+        thickness           0.028;
+        selectionMode       cellZone;
+        cellZone            FanDiskBattery1;
+        faceZone            FanDiskBattery1_faceZone;
+
+        // Optional entries
+        //gradient            <scalar>;
+        rho                 1.225;
+        //U                   <word>;
+
+        // Inherited entries
+    }
+Battery_fan2
+    {
+        // Mandatory entries
+        type                fanMomentumSource;
+        active              false;
+        fanCurve
+	    {
+		type		table;
+		//value 		500;
+		//type	polynomial;
+		//value	1;
+		//coeffs 	(100 0);
+		file            "$FOAM_CASE/constant/fanCurve_battery.txt";
+	    }
+	flowDir             (0.996567 0 0.082791);
+        thickness           0.028;
+        selectionMode       cellZone;
+        cellZone            FanDiskBattery2;
+        faceZone            FanDiskBattery2_faceZone;
+
+        // Optional entries
+        //gradient            <scalar>;
+        rho                 1.225;
+        //U                   <word>;
+
+        // Inherited entries
+    }
+
+Radiator_fan
+    {
+        // Mandatory entries
+        type                fanMomentumSource;
+        active              false;
+        fanCurve
+	    {
+		type		table;
+		//value 		500;
+		//type	polynomial;
+		//value	1;
+		//coeffs 	(100 0);
+		file            "$FOAM_CASE/constant/fanCurve_radiator.txt";
+	    }
+        flowDir             (0.8290375 0 0.5591929);
+        thickness           0.04115;
+        selectionMode       cellZone;
+        cellZone            FanDisk_Radiator;
+        faceZone            FanDisk_Radiator_faceZone;
+
+        // Optional entries
+        //gradient            <scalar>;
+        rho                 1.225;
+        //U                   <word>;
+
+        // Inherited entries
+    }
+
+// ************************************************************************* //

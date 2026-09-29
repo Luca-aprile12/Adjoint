@@ -1,0 +1,73 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      pa;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// =============================================================================
+//  PRESSIONE ADJOINT — half-car
+//
+//    p primal                  ->  pa adjoint            (manuale cap. 7.2)
+//    ------------------------------------------------------------------
+//    inlet   zeroGradient      ->  zeroGradient
+//    outlet  fixedValue        ->  adjointOutletPressure
+//    ground  zeroGradient      ->  zeroGradient
+//    DP_*    zeroGradient      ->  zeroGradient
+//    side/top symmetryPlane    ->  symmetryPlane
+//    symmetry symmetry         ->  symmetry
+//
+//  La regex "DP_.*" copre tutte le patch della macchina, ruote e tyre
+//  plinth compresi (per il plinth, che nel primal e' slip su U, la
+//  zeroGradient su pa e' equivalente).
+// =============================================================================
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    "(side|top)"
+    {
+        type            symmetryPlane;
+    }
+
+    symmetry
+    {
+        type            symmetry;
+    }
+
+    inlet
+    {
+        type            zeroGradient;
+    }
+
+    outlet
+    {
+        type            adjointOutletPressure;
+        value           uniform 0;
+    }
+
+    ground
+    {
+        type            zeroGradient;
+    }
+
+    "DP_.*"
+    {
+        type            zeroGradient;
+    }
+}
+
+// ************************************************************************* //

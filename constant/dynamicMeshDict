@@ -1,0 +1,91 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      dynamicMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// =============================================================================
+//  MORPHING BOXES — half-car
+//
+//  REGOLE CHE GOVERNANO QUESTE SCELTE
+//
+//  1) Tutto cio' che sta DENTRO la box viene deformato (patch comprese);
+//     tutto cio' che sta FUORI resta fermo esattamente. Non esiste un
+//     modo di escludere una patch che cada dentro la box.
+//
+//  2) Con confineBoundaryControlPoints true i control point sulle FACCE
+//     della box sono bloccati: lo spostamento vale zero sulla faccia e
+//     cresce andando verso l'interno, su una scala di circa UNA SPAZIATURA
+//     fra control point. Conseguenze pratiche:
+//       - una faccia coincidente con il piano di simmetria (y=0) o con il
+//         ground (z=0) li mantiene FERMI e PLANARI: e' la scelta corretta,
+//         ed e' esattamente il fix che ha risolto il problema
+//         "symmetryPlane is not planar" sul case FW. NON mettere valori
+//         negativi: il piano finirebbe DENTRO la regione deformabile.
+//       - una faccia che sfiora il profilo alare non "protegge" il
+//         profilo: lo congela. La liberta' di forma si perde proprio li'.
+// =============================================================================
+
+solver          volumetricBSplinesMotionSolver;
+
+volumetricBSplinesMotionSolverCoeffs
+{
+    FW_box
+    {
+        type                cartesian;
+
+        nCPsU               7;      // x (corda)
+        nCPsV               7;      // y (apertura)
+        nCPsW               4;      // z (altezza)
+
+        degreeU             3;
+        degreeV             3;
+        degreeW             3;
+
+        controlPointsDefinition     axisAligned;
+        lowerCpBounds       (-1.00  0.22  0.00);
+        upperCpBounds       (-0.25  0.900  0.40);
+
+        confineUMovement    false;
+        confineVMovement    false;
+        confineWMovement    false;
+
+        confineBoundaryControlPoints true;
+    }
+
+    RW_box
+    {
+        type                cartesian;
+
+        nCPsU               6;      // x (corda + supporti)
+        nCPsV               5;      // y (semi-apertura)
+        nCPsW               6;      // z (altezza)
+
+        degreeU             3;
+        degreeV             3;
+        degreeW             3;
+
+        controlPointsDefinition     axisAligned;
+        lowerCpBounds       (1.21  0.00  0.52);
+        upperCpBounds       (2.10  0.60  1.20);
+
+        confineUMovement    false;
+        confineVMovement    false;
+        confineWMovement    false;
+
+        confineBoundaryControlPoints true;
+    }
+}
+
+// ************************************************************************* //

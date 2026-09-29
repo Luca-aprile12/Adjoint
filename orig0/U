@@ -1,0 +1,89 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  8                                     |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      binary;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+#include        "../initialConditions";
+internalField   uniform $flowVelocity;
+
+boundaryField
+{
+    "(side|top)"
+    {
+        type            symmetryPlane;
+    }
+    symmetry
+    {
+	type		symmetry;
+    }
+    inlet
+    {
+        type            fixedValue;
+        value           $internalField;
+    }
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform (0 0 0);
+        value           $internalField;
+    }
+    ground
+    {
+        type             translatingWallVelocity;
+        U		$flowVelocity
+        value		uniform $flowVelocity;
+    }
+    DP_Group
+    {
+        type            fixedValue;
+        value           uniform (0 0 0);
+    }
+    DP_FL_Wheel
+    {
+        type            rotatingWallVelocity;
+        origin          $FLCenter;
+        axis            $FLaxis;
+        omega           $FLomega;
+    }
+    DP_FR_Wheel
+    {
+        type            rotatingWallVelocity;
+        origin          $FRCenter;
+        axis            $FRaxis;
+        omega           $FRomega;
+    }
+    DP_RL_Wheel
+    {
+        type            rotatingWallVelocity;
+        origin          $RLCenter;
+        axis            $RLaxis;
+        omega           $RLomega;
+    }
+    DP_RR_Wheel
+    {
+        type            rotatingWallVelocity;
+        origin          $RRCenter;
+        axis            $RRaxis;
+        omega           $RRomega;
+    }
+    DP_Tyre_Plinth
+    {
+        type            slip;
+    }
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,298 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      optimisationDict;
+}
+
+optimisationManager steadyOptimisation;
+
+primalSolvers
+{
+    primal1
+    {
+        active                 true;
+        type                   incompressible;
+        solver                 simple;
+        solutionControls
+        {
+            consistent yes;
+            nIters 600;
+            residualControl
+            {
+                "p.*"   1e-4;
+                "U.*"   1e-4;
+            }
+
+            averaging
+            {
+                average     false;
+            }
+        }
+    }
+}
+
+adjointManagers
+{
+    adjoint1
+    {
+        primalSolver             primal1;
+        adjointSolvers
+        {
+            adjointSolver1
+            {
+                active                 true;
+                type                   incompressible;
+                solver                 adjointSimple;
+
+                // Con DUE adjointSolver nello stesso manager entrambi
+                // vorrebbero registrare campi chiamati Ua e pa. Lo switch
+                // aggiunge il nome del solver come suffisso
+                // (UaadjointSolver1, paadjointSolver1) evitando la
+                // collisione. I file orig0/Ua e orig0/pa NON vanno
+                // rinominati: il solver prova prima il nome col suffisso e
+                // poi ripiega sul nome base.
+                // fvSolution usa pattern che coprono entrambe le forme.
+                useSolverNameForFields true;
+
+                objectives
+                {
+                    type            incompressible;
+                    objectiveNames
+                    {
+                        // J1 — drag di TUTTA la macchina.  w = 1.0/0.9447
+                        drag_car
+                        {
+                            weight      1.061;
+                            type        force;
+                            patches     ("DP_.*");
+                            direction   (1 0 0);
+                            Aref        1;
+                            rhoInf      1.225;
+                            UInf        16;
+                        }
+
+                        // J2 — downforce di TUTTA la macchina.  w = 2.5/2.7222
+                        // Cz < 0: minimizzare con peso positivo = piu' carico
+                        downforce_car
+                        {
+                            weight      0.917;
+                            type        force;
+                            patches     ("DP_.*");
+                            direction   (0 0 1);
+                            Aref        1;
+                            rhoInf      1.225;
+                            UInf        16;
+                        }
+
+                        // MONITOR — momento attorno all'asse anteriore a
+                        // terra. weight 0 => non entra nel gradiente, ma J
+                        // viene calcolato e stampato durante il primal.
+                        // Serve a leggere il ripartitore: front% = 1 + Cm/Cl.
+                        // Il VINCOLO vero e' l'adjointSolver "balanceConstr"
+                        // qui sotto, che usa un centro di riduzione diverso.
+                        balance_monitor
+                        {
+                            weight          0.0;
+                            type            moment;
+                            patches         ("DP_.*");
+                            direction       (0 1 0);   // asse di pitch
+                            rotationCenter  (0 0 0);   // asse anteriore a terra
+                            Aref            1;
+                            lRef            1.53;
+                            rhoInf          1.225;
+                            UInf            16;
+                            normalize       false;
+                        }
+                    }
+                }
+
+                ATCModel
+                {
+                    ATCModel          standard;
+                    extraConvection   0;
+                    nSmooth           3;
+                    zeroATCPatchTypes (wall patch);
+                    maskType          pointCells;
+                }
+
+                computeSensitivities   true;
+
+                solutionControls
+                {
+                    consistent yes;
+                    nIters 600;
+                    residualControl
+                    {
+                        "pa.*"  1e-4;
+                        "Ua.*"  1e-4;
+                    }
+                    averaging
+                    {
+                        average     false;
+                    }
+                }
+            }
+
+            balanceConstr
+            {
+                active                  true;
+                type                    incompressible;
+                solver                  adjointSimple;
+
+                // vedi nota in adjointSolver1
+                useSolverNameForFields  true;
+
+                isConstraint            true;
+                isDoubleSidedConstraint true;
+
+                objectives
+                {
+                    type            incompressible;
+                    objectiveNames
+                    {
+                        balance
+                        {
+                            weight          1.0;
+                            type            moment;
+                            patches         ("DP_.*");
+                            direction       (0 1 0);
+                            rotationCenter  (0.7814 0 0);  // CoP a target
+                            Aref            1;
+                            lRef            1.53;
+                            rhoInf          1.225;
+                            UInf            16;
+
+                            // banda: l_t < J < u_t  (+-3 punti di balance)
+                            targetLeft      -0.082;
+                            target           0.082;
+
+                            // IMPORTANTE: J vale ~0 al cycle 1 per
+                            // costruzione. Normalizzarlo significherebbe
+                            // dividere per zero.
+                            normalize       false;
+                        }
+                    }
+                }
+
+                ATCModel
+                {
+                    ATCModel          standard;
+                    extraConvection   0;
+                    nSmooth           3;
+                    zeroATCPatchTypes (wall patch);
+                    maskType          pointCells;
+                }
+
+                computeSensitivities   true;
+
+                solutionControls
+                {
+                    consistent yes;
+                    nIters 250;
+                    residualControl
+                    {
+                        "pa.*"  1e-4;
+                        "Ua.*"  1e-4;
+                    }
+                    averaging
+                    {
+                        average     false;
+                    }
+                }
+            }
+        }
+    }
+}
+
+optimisation
+{
+    convergence
+    {
+        objective           2.e-3;
+        designVariables     1.e-3;
+    }
+
+    designVariables
+    {
+        type            shape;
+        shapeType       volumetricBSplines;
+
+        // Entrambe le ali: il gradiente arriva dove ci sono le morphing box
+        patches         (DP_FW DP_RW);
+
+        sensitivityType shapeFI;
+
+        maxInitChange   8e-3;
+    }
+
+    updateMethod
+    {
+        method          nullSpace;
+
+        nullSpace
+        {
+            // iterazioni di Newton del duale (default 1000, l'esempio del
+            // manuale usa 6000). Nessun costo CFD.
+            maxIters                        6000;
+            // line search INTERNO al duale, non quello sulla geometria
+            maxLineSearchIters              10;
+            // il duale si risolve a punti interni con tolleranze via via
+            // piu' strette: questa e' la finale
+            dualTolerance                   1.e-12;
+            // include anche i vincoli QUASI violati, per evitare che
+            // l'insieme dei vincoli attivi cambi da un cycle all'altro
+            // ("could cause the optimisation to oscillate")
+            violatedConstraintsThreshold    1.e-3;
+            // evita un sistema duale singolare se tutte le design variable
+            // finiscono sui propri bound
+            perturbation                    1.e-2;
+
+            // --- controllo del passo ---
+            // adaptiveStep scala le parti null- e range-space perche' lo
+            // spostamento massimo per cycle sia pari a maxDVChange, che di
+            // DEFAULT vale maxInitChange: quindi il nostro 8e-3 continua a
+            // governare il passo anche qui.
+            adaptiveStep                    true;
+            maxDVChange                     8e-3;
+            // fino a questo cycle la scalatura e' adattiva, poi resta fissa
+            lastAcceleratedCycle            20;
+            strictMaxDVChange               false;
+            // se il vincolo e' violato, chiede di ridurre la violazione del
+            // 50% per cycle: rientro geometrico invece che a strappo
+            targetConstraintReduction       0.5;
+        }
+
+        // ---- ALTERNATIVA piu' semplice, se nullSpace desse problemi ----
+        // constraintProjection tiene il vincolo ESATTAMENTE al valore del
+        // primo cycle (tolleranza zero invece di +-3 punti), ma ha un solo
+        // parametro e nessun problema dualita'/interior point. In quel caso
+        // servirebbe anche togliere isDoubleSidedConstraint (resta solo
+        // isConstraint true) e le voci targetLeft/target dal vincolo.
+        //
+        // method          constraintProjection;
+        // constraintProjection
+        // {
+        //     useCorrection   false;   // = mantieni il valore del cycle 1
+        // }
+
+        lineSearch
+        {
+            type        ArmijoConditions;
+            minStep     0.05;
+            maxIters    8;
+            c1          1.e-4;
+            ratio       0.7;
+        }
+    }
+}
+
+// ************************************************************************* //

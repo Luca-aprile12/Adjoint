@@ -1,0 +1,28 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  3.0.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      Lambda2;
+}
+Lambda21
+{
+    // Mandatory entries (unmodifiable)
+    type            Lambda2;
+    libs            ("libfieldFunctionObjects.so");
+
+    // Optional (inherited) entries
+    field           	UMean;
+    result		Lambda2;
+    writeControl    	none;
+    executeControl   	none;
+
+}

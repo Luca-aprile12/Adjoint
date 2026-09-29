@@ -1,0 +1,38 @@
+# Rinominare questo file in ".gitignore" nella radice del repository
+
+# --- risultati di calcolo OpenFOAM ---
+/0/
+/[1-9]*/
+/0.[0-9]*/
+processor*/
+allProcessors*/
+postProcessing/
+VTK/
+constant/polyMesh/
+constant/extendedFeatureEdgeMesh/
+constant/triSurface/*.eMesh
+*.foam
+
+# --- output di ottimizzazione e validazione ---
+optimisation/
+log/
+log_*/
+validation*/
+Export_CAD/
+sezioni/
+
+# --- scarti di diagnostica e prove ---
+constant/triSurface/*_normal_*.obj
+constant/triSurface/*_[0-9].obj
+constant/triSurface/*.vtp
+*_morphed.obj
+*_test.obj
+*_disp.vtk
+convergenza.*
+ended.txt
+
+# --- sistema ---
+__pycache__/
+*.pyc
+.DS_Store
+*~

@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+# =============================================================================
+#  plotConvergence — estrae la storia dell'ottimizzazione dal log di
+#  adjointOptimisationFoam e ne fa il grafico.
+#
+#  DA DOVE VENGONO I NUMERI
+#  A ogni valutazione del primal il solver stampa un blocco di quattro righe
+#  con i valori GREZZI degli obiettivi:
+#
+#      drag_car : 0.942626          <- Cd  (Aref 1, rhoInf 1.225, UInf 16)
+#      downforce_car : -2.75037     <- Cl
+#      balance_monitor : 1.32618    <- Cm attorno all'origine  (peso 0)
+#      balance : -0.0784901         <- Cm attorno al CoP bersaglio (vincolo)
+#
+#  ATTENZIONE: piu' sotto il solver ristampa "drag_car" e "downforce_car"
+#  dentro il blocco "Adjoint solver adjointSolver1", ma quelli sono i valori
+#  PESATI (w_drag=1.061, w_down=0.917), non i coefficienti. Prendere quelli
+#  darebbe Cd = 1.00013 invece di 0.942626. Questo script legge solo il blocco
+#  di quattro righe consecutive, che e' quello del primal.
+#
+#  Dentro un ciclo il blocco compare piu' volte, una per ogni tentativo di
+#  line search: si tiene l'ULTIMO, che e' il passo accettato.
+#
+#  IL RIPARTITORE non e' stampato: si ricava dai due momenti. Con il momento
+#  preso attorno all'origine,
+#         front% = 1 + Cm(0) / Cl
+#  che per il ciclo 12 da' 1 + 1.32618/(-2.75037) = 51.78%.
+#  La validazione indipendente su mesh rigenerata ha misurato 51.98%.
+#
+#  USO
+#    ./plotConvergence log/04_adjointOpt --out convergenza
+#  produce convergenza.png, .pdf e .svg, piu' convergenza.csv con i dati
+#  estratti (da allegare o da ricontrollare a mano).
+# =============================================================================
+
+import argparse, re, sys
+import numpy as np
+
+# pesi usati nell'optimisationDict, servono solo per un controllo di coerenza
+W_DRAG, W_DOWN = 1.061, 0.917
+
+BLOCK = re.compile(
+    r"^drag_car : ([-\d.eE+]+)\s*\n"
+    r"downforce_car : ([-\d.eE+]+)\s*\n"
+    r"balance_monitor : ([-\d.eE+]+)\s*\n"
+    r"balance : ([-\d.eE+]+)", re.M)
+
+
+def extract(path):
+    txt = open(path, errors="ignore").read()
+    parts = re.split(r"(?m)^Optimisation cycle\s+(\d+)", txt)
+    out = []
+    for i in range(1, len(parts), 2):
+        cyc, blk = int(parts[i]), parts[i + 1]
+        ev = BLOCK.findall(blk)
+        if not ev:
+            continue
+        cd, cl, cm0, jbal = (float(x) for x in ev[-1])   # ultimo = passo accettato
+        feas = re.findall(r"Feasibility = ([-\d.eE+]+)", blk)
+        out.append(dict(cycle=cyc, cd=cd, cl=cl, cm0=cm0, jbal=jbal,
+                        front=100.0 * (1.0 + cm0 / cl),
+                        feas=float(feas[-1]) if feas else 0.0,
+                        nEval=len(ev)))
+    if not out:
+        sys.exit("ERRORE: nessun ciclo trovato. E' il log giusto?")
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("log")
+    ap.add_argument("--out", default="convergenza")
+    ap.add_argument("--target", type=float, default=48.93,
+                    help="ripartitore bersaglio in %% (dal rotationCenter del vincolo)")
+    ap.add_argument("--band", type=float, default=3.0, help="semiampiezza del vincolo, in punti")
+    a = ap.parse_args()
+
+    d = extract(a.log)
+    c = np.array([r["cycle"] for r in d], float)
+    cd = np.array([r["cd"] for r in d])
+    cl = np.array([r["cl"] for r in d])
+    fr = np.array([r["front"] for r in d])
+    fe = np.array([r["feas"] for r in d])
+
+    dcd = (cd / cd[0] - 1.0) * 100.0
+    dcl = (np.abs(cl) / abs(cl[0]) - 1.0) * 100.0
+    ld = np.abs(cl) / cd
+    dld = (ld / ld[0] - 1.0) * 100.0
+
+    with open(a.out + ".csv", "w") as f:
+        f.write("cycle,Cd,Cl,L_over_D,front_pct,feasibility,dCd_pct,dCl_pct,dLD_pct,nEval\n")
+        for i, r in enumerate(d):
+            f.write(f"{r['cycle']},{cd[i]:.6f},{cl[i]:.6f},{ld[i]:.4f},"
+                    f"{fr[i]:.3f},{fe[i]:.3e},{dcd[i]:.3f},{dcl[i]:.3f},"
+                    f"{dld[i]:.3f},{r['nEval']}\n")
+
+    print(f"{'cyc':>4} {'Cd':>9} {'Cl':>10} {'L/D':>7} {'front%':>8} {'feas':>10}")
+    for i, r in enumerate(d):
+        print(f"{r['cycle']:4d} {cd[i]:9.5f} {cl[i]:10.5f} {ld[i]:7.3f} "
+              f"{fr[i]:8.2f} {fe[i]:10.2e}")
+    print(f"\nDelta finale:  Cd {dcd[-1]:+.2f}%   |Cl| {dcl[-1]:+.2f}%   "
+          f"L/D {dld[-1]:+.2f}%   ripartitore {fr[0]:.2f} -> {fr[-1]:.2f}%")
+
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        sys.exit("\nmatplotlib non installato: pip3 install --user matplotlib\n"
+                 f"I dati sono comunque in {a.out}.csv")
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6), sharex=True,
+                                   gridspec_kw=dict(height_ratios=[1.45, 1], hspace=0.12))
+
+    ax1.axhline(0, color="#b8b7b0", lw=1.2)
+    ax1.plot(c, dld, "-o", ms=4, lw=2.2, color="#1baf7a", label="L/D efficiency")
+    ax1.plot(c, dcl, "-o", ms=4, lw=2.2, color="#eb6834", label="|C$_L$|")
+    ax1.plot(c, dcd, "-o", ms=4, lw=2.2, color="#2a78d6", label="C$_D$")
+    for y, col in ((dld[-1], "#1baf7a"), (dcl[-1], "#eb6834"), (dcd[-1], "#2a78d6")):
+        ax1.annotate(f"{y:+.1f}%", (c[-1], y), xytext=(8, -4),
+                     textcoords="offset points", color=col, fontsize=10, weight="bold")
+    ax1.set_ylabel("change relative to cycle 1")
+    ax1.yaxis.set_major_formatter(lambda v, p: f"{v:+.0f}%" if v else "0")
+    ax1.grid(axis="y", color="#e4e3de", lw=0.8)
+    ax1.set_axisbelow(True)
+    ax1.set_title("Constrained adjoint optimisation — half car, 16 m/s",
+                  loc="left", fontsize=13)
+
+    # --- legenda subito SOTTO l'asse dello zero, centrata.
+    # In "lower right" finiva addosso alla curva del C_D, che negli ultimi
+    # cicli si appiattisce proprio li'. La banda appena sotto lo zero e'
+    # libera: il C_D ci passa solo fra il ciclo 1 e il 2, il C_L sta sopra.
+    # La quota si calcola dai limiti dell'asse, cosi' resta giusta anche con
+    # dati diversi.
+    span = max(dcd.max(), dcl.max(), dld.max()) - min(dcd.min(), dcl.min(), dld.min())
+    ax1.set_ylim(min(dcd.min(), dcl.min(), dld.min()) - 0.13 * span,
+                 max(dcd.max(), dcl.max(), dld.max()) + 0.13 * span)
+    y0, y1 = ax1.get_ylim()
+    ax1.legend(frameon=False, ncol=3, fontsize=10,
+               loc="upper center", bbox_to_anchor=(0.5, (0.0 - y0) / (y1 - y0) - 0.015))
+    # margine a destra per le etichette dei valori finali, che prima venivano tagliate
+    ax1.set_xlim(c[0] - 0.3, c[-1] + 1.3)
+
+    hi, lo = a.target + a.band, a.target - a.band
+    ax2.set_ylim(min(fr.min(), a.target) - 0.55, fr.max() + 0.75)
+    ax2.axhspan(hi, fr.max() + 2.0, color="#d03b3b", alpha=0.10, lw=0)
+    ax2.axhline(hi, color="#d03b3b", ls="--", lw=1.8)
+    ax2.axhline(a.target, color="#888781", ls=":", lw=1.2)
+    ax2.plot(c, fr, "-o", ms=4, lw=2.2, color="#534ab7")
+    ax2.annotate(f"+{a.band:g} pt limit ({hi:.2f}%)", (c[0], hi), xytext=(4, 5),
+                 textcoords="offset points", color="#a32d2d", fontsize=9)
+    ax2.annotate(f"target ({a.target:.2f}%)", (c[-1], a.target), xytext=(-4, 5),
+                 textcoords="offset points", color="#888781", fontsize=9, ha="right")
+    k = int(np.argmax(fe > 0)) if (fe > 0).any() else None
+    if k:
+        ax2.annotate("constraint becomes active", (c[k], fr[k]), xytext=(-12, 16),
+                     textcoords="offset points", fontsize=9, color="#444444",
+                     arrowprops=dict(arrowstyle="-", color="#666666", lw=0.9))
+    ax2.set_ylabel("front aero balance")
+    ax2.yaxis.set_major_formatter(lambda v, p: f"{v:.0f}%")
+    ax2.set_xlabel("optimisation cycle")
+    ax2.set_xticks(c)
+    ax2.grid(axis="y", color="#e4e3de", lw=0.8)
+    ax2.set_axisbelow(True)
+
+    for ax in (ax1, ax2):
+        for s in ("top", "right"):
+            ax.spines[s].set_visible(False)
+
+    for ext in ("png", "pdf", "svg"):
+        fig.savefig(f"{a.out}.{ext}", dpi=200, bbox_inches="tight")
+    print(f"\nScritti {a.out}.png / .pdf / .svg e {a.out}.csv")
+
+
+if __name__ == "__main__":
+    main()

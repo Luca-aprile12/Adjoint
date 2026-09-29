@@ -1,0 +1,112 @@
+#!/bin/bash
+# =============================================================================
+# runOpt — half-car ADJOINT
+#
+# Presuppone che la MESH esista gia' (generata con ./runMesh del case
+# half-car, invariato). Questo script fa solo: decomposizione, init,
+# loop di ottimizzazione con watchdog, ricostruzione, estrazione STL.
+#
+# =============================================================================
+
+echo -e "\nSTART OPTIMIZATION AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S) "\n"
+
+# ---------- Sanity check ambiente ----------
+if ! command -v adjointOptimisationFoam > /dev/null 2>&1; then
+    echo "ERRORE: ambiente OpenFOAM non caricato."
+    exit 1
+fi
+if [ ! -f constant/polyMesh/owner ] && [ ! -d processor0/constant/polyMesh ]; then
+    echo "ERRORE: nessuna mesh trovata. Genera prima la mesh con ./runMesh"
+    exit 1
+fi
+
+# ---------- 1. PULIZIA ----------
+echo -e "Cleaning previous stuff"
+    rm -fr [0-9]* processor* log_solve postProcessing VTK Export_CAD allProcessors
+    rm -f WATCHDOG_STOP.txt ended.txt
+    cp -r orig0 ./0
+    mkdir -p log_solve Export_CAD
+echo -e "  --> Done"
+
+# ==================== CORES ===========================
+mock="$(grep 'np' initialConditions | awk '{print $2}')"
+np=${mock:0:${#mock}-1}
+echo "Cores: $np"
+
+# ---------- 2. DECOMPOSIZIONE ----------
+echo -e "\nDecomposing case for $np processor(s)"
+    decomposePar > log_solve/01_decomposePar 2>&1
+echo "  --> Done"
+
+echo -e "\nRenumbering mesh"
+    mpirun -np $np renumberMesh -overwrite -latestTime -parallel > log_solve/02_renumberMesh 2>&1
+echo "  --> Done"
+
+# ---------- 3. INIZIALIZZAZIONE ----------
+echo -e "\nSolving potentialFoam"
+    mpirun -np $np potentialFoam -parallel > log_solve/03_potentialFoam 2>&1
+echo -e "  --> Done"
+
+# ---------- 4. LOOP DI OTTIMIZZAZIONE + WATCHDOG ----------
+# Il watchdog ferma il run in modo pulito se: merit in deriva (K2/K3),
+# line search bloccata (K4), mesh runaway (K5), mesh degradata (K6).
+echo -e "\nSolving adjointOptimisationFoam (con watchdog)"
+    mpirun -np $np adjointOptimisationFoam -parallel > log_solve/04_adjointOpt &
+    SOLVER_PID=$!
+    python3 scripts/watchdog.py --log log_solve/04_adjointOpt \
+        --pid $SOLVER_PID --case . > log_solve/00_watchdog 2>&1 &
+    WATCHDOG_PID=$!
+    wait $SOLVER_PID
+    SOLVER_RC=$?
+    kill $WATCHDOG_PID 2>/dev/null
+    if [ -f WATCHDOG_STOP.txt ]; then
+        echo ""
+        echo "  *** RUN FERMATO DAL WATCHDOG ***"
+        cat WATCHDOG_STOP.txt
+    fi
+echo -e "  --> Done (solver rc=$SOLVER_RC)"
+
+# Ripristina stopAt se il watchdog l'ha cambiato
+if grep -q "stopAt.*writeNow" system/controlDict; then
+    sed -i 's/stopAt\s\+writeNow\s*;/stopAt          endTime;/' system/controlDict
+fi
+
+# ---------- 5. RICOSTRUZIONE ----------
+echo -e "\nReconstructing mesh and fields"
+    reconstructParMesh -constant > log_solve/05_reconstructParMesh 2>&1
+    reconstructParMesh -fullMatch -mergeTol 1e-10 >> log_solve/05_reconstructParMesh 2>&1
+    reconstructPar > log_solve/06_reconstructPar 2>&1
+echo "  --> Done"
+
+# ---------- 6. ESTRAZIONE STL (FW e RW) ----------
+T_BASE=0
+T_OPT=$(foamListTimes -noFunctionObjects 2>/dev/null | sort -n | tail -1)
+if [ -z "$T_OPT" ] || [ "$T_OPT" = "0" ]; then
+    T_OPT=$(ls -d [0-9]*/ 2>/dev/null | sort -n | tail -1 | tr -d '/')
+fi
+echo -e "\nBaseline timestep: $T_BASE   Optimised timestep: $T_OPT"
+
+for T in $T_BASE $T_OPT; do
+    [ -z "$T" ] && continue
+    TAG=$([ "$T" = "0" ] && echo "Baseline" || echo "Optimised")
+    echo -e "\nExtracting $TAG STL (t=$T)..."
+    D=Export_CAD/${TAG,,}_split
+    mkdir -p $D
+    surfaceMeshExtract -time $T $D/full.stl > log_solve/07_surfaceExport_$TAG 2>&1
+    surfaceSplitByPatch $D/full.stl >> log_solve/07_surfaceExport_$TAG 2>&1
+    cp $D/full_DP_FW.stl Export_CAD/FrontWing_${TAG}.stl 2>/dev/null || \
+        echo "  WARNING: DP_FW non trovato in $D"
+    cp $D/full_DP_RW.stl Export_CAD/RearWing_${TAG}.stl 2>/dev/null || \
+        echo "  WARNING: DP_RW non trovato in $D"
+    echo "  --> $TAG done"
+done
+
+echo -e "\nFile in Export_CAD:"
+    ls -lh Export_CAD/*.stl 2>/dev/null
+
+echo -e "\nZipping processors"
+    mkdir -p allProcessors
+    mv processor* ./allProcessors/ 2>/dev/null
+
+touch ended.txt
+echo -e "\nEND OPTIMIZATION AT:" $(date +%d\ %h\ %Y,\ %H:%M:%S)

@@ -1,0 +1,38 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2312                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      adjointRASProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// =============================================================================
+//  Frozen turbulence.
+//
+//  adjointLaminar non risolve PDE aggiunte per la turbolenza: assume nut
+//  congelata rispetto alle variazioni di forma. E' un'approssimazione
+//  standard e documentata (manuale cap. 6), e non richiede i campi ka/wa.
+//
+//  Nota: adjointkOmegaSST in v2312 patch=260127 ha un bug dimensionale in
+//  adjointMeanFlowSource() che lo fa crashare (verificato sul case FW).
+//  La strada "corretta" per la turbolenza differenziata sarebbe passare il
+//  primal a SpalartAllmaras e usare adjointSpalartAllmaras: e' un cambio
+//  di modello che va valutato a parte.
+// =============================================================================
+
+adjointRASModel     adjointLaminar;
+
+adjointTurbulence   off;
+
+printCoeffs         on;
+
+// ************************************************************************* //
